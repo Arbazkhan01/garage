@@ -1,0 +1,81 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --color-accent: #ff5500;
+    --color-accent-hover: #ff6a1a;
+    --color-accent-glow: rgba(255, 85, 0, 0.25);
+    --color-surface-dark: #0f1218;
+    --color-surface-card: #141820;
+    --color-surface-elevated: #1b212c;
+    --color-border-subtle: rgba(255, 255, 255, 0.08);
+    --color-border-highlight: rgba(255, 85, 0, 0.4);
+  }
+
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    background-color: #0a0c10;
+    color: #e5e7eb;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, .font-display {
+    font-family: 'Syne', sans-serif;
+    letter-spacing: -0.02em;
+  }
+
+  .font-tech {
+    font-family: 'Chakra Petch', monospace;
+  }
+}
+
+/* Custom subtle glass & automotive textures */
+.glass-panel {
+  background: rgba(18, 22, 30, 0.75);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.glass-panel-hover {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-panel-hover:hover {
+  background: rgba(24, 30, 42, 0.88);
+  border-color: rgba(255, 85, 0, 0.35);
+  box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.7), 0 0 24px -4px rgba(255, 85, 0, 0.15);
+}
+
+.carbon-pattern {
+  background-color: #0b0d12;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 0);
+  background-size: 24px 24px;
+}
+
+.metallic-gradient {
+  background: linear-gradient(135deg, #1b212c 0%, #10141a 50%, #171d26 100%);
+}
+
+.accent-glow-sm {
+  box-shadow: 0 0 15px rgba(255, 85, 0, 0.3);
+}
+
+.accent-glow-md {
+  box-shadow: 0 0 30px rgba(255, 85, 0, 0.4);
+}
+
+/* Custom scrollbar for modern dark feel */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #0a0c10;
+}
+::-webkit-scrollbar-thumb {
+  background: #232a36;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #ff5500;
+}
