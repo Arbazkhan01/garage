@@ -356,3 +356,170 @@ export interface BookingFormData {
   preferredTime: string;
   additionalNotes: string;
 }
+
+export type JobStatus =
+  | 'OPEN'
+  | 'VEHICLE_RECEIVED'
+  | 'INSPECTION'
+  | 'DIAGNOSIS'
+  | 'QUOTE_PENDING'
+  | 'APPROVAL_PENDING'
+  | 'WORK_IN_PROGRESS'
+  | 'QUALITY_CHECK'
+  | 'READY_FOR_DELIVERY'
+  | 'COMPLETED'
+  | 'CANCELLED';
+
+export interface JobCardPartItem {
+  id: string;
+  inventoryPartId?: string;
+  name: string;
+  partNumber?: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+}
+
+export interface JobCardLabourItem {
+  id: string;
+  description: string;
+  hours: number;
+  ratePerHour: number;
+  total: number;
+}
+
+export interface JobCardAdditionalWorkItem {
+  id: string;
+  description: string;
+  partsCost: number;
+  labourCost: number;
+  gst: number;
+  total: number;
+  status: 'pending' | 'approved' | 'rejected';
+  requestedAt: string;
+  respondedAt?: string;
+}
+
+export interface JobCard {
+  id: string;
+  jobCardNumber: string;
+  bookingId: string;
+  customerName: string;
+  customerPhone: string;
+  customerEmail: string;
+  customerAddress?: string;
+  vehicleBrand: string;
+  vehicleModel: string;
+  vehicleVariant: string;
+  vehicleRegNumber: string;
+  serviceAdvisor: string;
+  assignedTechnicianId: string;
+  assignedTechnicianName: string;
+  serviceBay: string;
+  checkInDate: string;
+  expectedDeliveryDate: string;
+  currentKm: number;
+  customerComplaint: string;
+  technicianDiagnosis: string;
+  workRequired: string[];
+  partsRequired: JobCardPartItem[];
+  labour: JobCardLabourItem[];
+  additionalWork: JobCardAdditionalWorkItem[];
+  inspectionId?: string;
+  quotationId?: string;
+  invoiceId?: string;
+  approvalStatus: 'PENDING' | 'APPROVED' | 'REJECTED' | 'NOT_REQUIRED';
+  paymentStatus: 'PENDING' | 'PAID' | 'PARTIAL';
+  jobStatus: JobStatus;
+  notes: string[];
+  photos: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface InventoryPart {
+  id: string;
+  name: string;
+  partNumber: string;
+  brand: string;
+  category: string;
+  compatibleVehicles: string[];
+  supplier: string;
+  purchasePrice: number;
+  sellingPrice: number;
+  gst: number;
+  stockQuantity: number;
+  reservedQuantity: number;
+  minStock: number;
+  warehouseLocation: string;
+  createdAt: string;
+}
+
+export type PickupDropStatus =
+  | 'REQUESTED'
+  | 'DRIVER_ASSIGNED'
+  | 'DRIVER_EN_ROUTE'
+  | 'VEHICLE_PICKED_UP'
+  | 'AT_WORKSHOP'
+  | 'READY_FOR_DROP'
+  | 'DELIVERED';
+
+export interface PickupDropRequest {
+  id: string;
+  bookingId: string;
+  customerName: string;
+  customerPhone: string;
+  vehicleInfo: string;
+  pickupAddress: string;
+  dropAddress: string;
+  driverName?: string;
+  driverPhone?: string;
+  date: string;
+  time: string;
+  status: PickupDropStatus;
+  notes?: string;
+}
+
+export interface AuditLog {
+  id: string;
+  userId: string;
+  userName: string;
+  userRole: UserRole;
+  action: string;
+  entity: string;
+  entityId: string;
+  timestamp: string;
+  previousValue?: string;
+  newValue?: string;
+  details?: string;
+}
+
+export interface ServicePackage {
+  id: string;
+  name: string;
+  category: VehicleCategory | 'all';
+  description: string;
+  services: string[];
+  partsIncluded: string[];
+  originalPrice: number;
+  packagePrice: number;
+  savings: number;
+  popular?: boolean;
+}
+
+export interface PricingRule {
+  id: string;
+  brand: string;
+  model: string;
+  variant: string;
+  fuelType: string;
+  serviceId: string;
+  basePrice: number;
+  labourPrice: number;
+  partsEstimate: number;
+  multiplier: number;
+  gst: number;
+  inspectionRequired: boolean;
+  active: boolean;
+}
+

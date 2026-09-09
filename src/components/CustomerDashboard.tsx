@@ -17,14 +17,21 @@ import {
   CreditCard,
   QrCode,
   ShieldCheck,
-  Check
+  Check,
+  LogOut,
+  ClipboardCheck,
+  FileSignature,
+  Tag,
+  AlertTriangle,
+  X
 } from 'lucide-react';
-import { CustomerVehicle, Booking, Invoice, NotificationItem, UserProfile } from '../types';
+import { CustomerVehicle, Booking, Invoice, NotificationItem, UserProfile, JobCard } from '../types';
 import { AuthService } from '../services/authService';
 import { VehicleService } from '../services/vehicleService';
 import { BookingService } from '../services/bookingService';
 import { InvoiceService } from '../services/invoiceService';
 import { NotificationService } from '../services/notificationService';
+import { JobCardService } from '../services/jobCardService';
 import { VEHICLE_DATABASE } from '../data/vehicleData';
 
 export const CustomerDashboard: React.FC = () => {
@@ -36,6 +43,10 @@ export const CustomerDashboard: React.FC = () => {
     const p = location.pathname;
     if (p.includes('/vehicles')) return 'vehicles';
     if (p.includes('/bookings')) return 'bookings';
+    if (p.includes('/inspections')) return 'inspections';
+    if (p.includes('/quotations')) return 'quotations';
+    if (p.includes('/reminders')) return 'reminders';
+    if (p.includes('/offers')) return 'offers';
     if (p.includes('/service-history')) return 'history';
     if (p.includes('/invoices')) return 'invoices';
     if (p.includes('/notifications')) return 'notifications';
@@ -44,11 +55,13 @@ export const CustomerDashboard: React.FC = () => {
   };
 
   const [activeTab, setActiveTab] = useState<string>(getTabFromPath());
-  const [currentUser, setCurrentUser] = useState<UserProfile>(AuthService.getCurrentUser());
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(AuthService.getCurrentUser());
   const [vehicles, setVehicles] = useState<CustomerVehicle[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [jobCards, setJobCards] = useState<JobCard[]>([]);
+  const [couponCopied, setCouponCopied] = useState<string | null>(null);
 
   // Add Vehicle Modal State
   const [showAddVehicleModal, setShowAddVehicleModal] = useState(false);
@@ -69,10 +82,13 @@ export const CustomerDashboard: React.FC = () => {
   const loadAll = () => {
     const user = AuthService.getCurrentUser();
     setCurrentUser(user);
-    setVehicles(VehicleService.getUserVehicles(user.id));
-    setBookings(BookingService.getUserBookings(user.id));
-    setInvoices(InvoiceService.getUserInvoices(user.email));
-    setNotifications(NotificationService.getUserNotifications(user.id));
+    if (user) {
+      setVehicles(VehicleService.getUserVehicles(user.id));
+      setBookings(BookingService.getUserBookings(user.id));
+      setInvoices(InvoiceService.getUserInvoices(user.email));
+      setNotifications(NotificationService.getUserNotifications(user.id));
+    }
+    setJobCards(JobCardService.getAllJobCards());
   };
 
   useEffect(() => {
@@ -87,10 +103,15 @@ export const CustomerDashboard: React.FC = () => {
     else navigate(`/dashboard/${tab}`);
   };
 
+  const handleRespondAdditionalWork = (jobCardId: string, workId: string, decision: 'approved' | 'rejected') => {
+    JobCardService.respondToAdditionalWork(jobCardId, workId, decision);
+    loadAll();
+  };
+
   // Add vehicle submit
   const handleAddVehicleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newReg.trim()) return;
+    if (!newReg.trim() || !currentUser) return;
 
     VehicleService.addVehicle({
       userId: currentUser.id,
@@ -137,6 +158,21 @@ export const CustomerDashboard: React.FC = () => {
 
   const activeBooking = bookings.find((b) => b.status !== 'completed' && b.status !== 'cancelled');
 
+  if (!currentUser) {
+    return (
+      <div className="max-w-md mx-auto py-24 px-4 text-center space-y-4">
+        <h2 className="text-2xl font-bold text-white">Sign In Required</h2>
+        <p className="text-xs text-neutral-400">Please sign in to access your digital vehicle garage.</p>
+        <button
+          onClick={() => navigate('/login')}
+          className="px-6 py-2.5 rounded-xl bg-[#ff5500] text-white font-tech font-bold uppercase text-xs"
+        >
+          Go to Sign In
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Dashboard Header Banner */}
@@ -168,6 +204,16 @@ export const CustomerDashboard: React.FC = () => {
             <Plus className="w-4 h-4" />
             <span>Book New Service</span>
           </button>
+          <button
+            onClick={() => {
+              AuthService.logout();
+              navigate('/login');
+            }}
+            className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-neutral-300 hover:text-white font-tech text-xs uppercase tracking-wider border border-white/10 transition-all flex items-center gap-2"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Sign Out</span>
+          </button>
         </div>
       </div>
 
@@ -177,6 +223,10 @@ export const CustomerDashboard: React.FC = () => {
           { id: 'overview', label: 'Overview', icon: Wrench },
           { id: 'vehicles', label: `My Garage (${vehicles.length})`, icon: Car },
           { id: 'bookings', label: `Service Bookings (${bookings.length})`, icon: Calendar },
+          { id: 'inspections', label: 'Inspections & DVI', icon: ClipboardCheck },
+          { id: 'quotations', label: 'Quotations & Approvals', icon: FileSignature },
+          { id: 'reminders', label: 'Service Reminders', icon: AlertTriangle },
+          { id: 'offers', label: 'Exclusive Offers', icon: Tag },
           { id: 'history', label: 'Service History', icon: Clock },
           { id: 'invoices', label: `Invoices & Payments (${invoices.length})`, icon: FileText },
           { id: 'notifications', label: `Notifications (${notifications.length})`, icon: Bell },
@@ -707,6 +757,312 @@ export const CustomerDashboard: React.FC = () => {
             >
               Save Profile Changes
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* TAB: INSPECTIONS & DVI */}
+      {activeTab === 'inspections' && (
+        <div className="space-y-6">
+          <div className="bg-[#12161f] border border-white/10 rounded-2xl p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-5">
+              <div>
+                <span className="text-xs font-tech font-bold uppercase tracking-widest text-[#ff5500]">
+                  Digital Vehicle Inspection (DVI)
+                </span>
+                <h3 className="text-xl font-bold text-white mt-1">Multi-Point Diagnostic Health Report</h3>
+                <p className="text-xs text-neutral-400">
+                  Certified garage inspection by TORQX Master Technicians using OEM OBD-II diagnostic tools.
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-tech font-bold text-xs">
+                  Overall Health: 92% (Pass)
+                </span>
+              </div>
+            </div>
+
+            {/* DVI 13-Point Matrix */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
+              {[
+                { title: 'Engine Oil & Viscosity', status: 'pass', desc: '0W-40 Motul 300V fresh level optimal', color: 'emerald' },
+                { title: 'Front Brake Pads (Brembo)', status: 'warning', desc: '4.2mm remaining (Recommend replacement at 3mm)', color: 'amber' },
+                { title: 'Rear Brake Pads & Discs', status: 'pass', desc: '7.8mm remaining, rotors runout within 0.03mm', color: 'emerald' },
+                { title: 'Battery State of Health (SoH)', status: 'pass', desc: '12.6V resting, 94% cold cranking capacity (CCA)', color: 'emerald' },
+                { title: 'Suspension & Bushings', status: 'pass', desc: 'No hydraulic strut leakage, bushings intact', color: 'emerald' },
+                { title: 'Tyre Tread & Alignment', status: 'warning', desc: 'Front tyres 3.8mm, minor toe-in angle deviation', color: 'amber' },
+                { title: 'Cooling System & Radiator', status: 'pass', desc: '50/50 G13 coolant mix tested to -35°C, no leaks', color: 'emerald' },
+                { title: 'Transmission Fluid & DSG', status: 'pass', desc: 'Shift adaptation normal, fluid clarity good', color: 'emerald' },
+                { title: 'Air Conditioning & Cabin Filter', status: 'pass', desc: 'Vent temperature 6.2°C at idle, filter clean', color: 'emerald' },
+                { title: 'Steering & Tie Rods', status: 'pass', desc: 'Zero rack play, electric power steering calibrated', color: 'emerald' },
+                { title: 'OBD-II Electronics Scan', status: 'pass', desc: '0 Active DTC fault codes stored in ECU/TCU/ABS', color: 'emerald' },
+                { title: 'Underbody & Exhaust Lines', status: 'pass', desc: 'Cat-back heat shields fastened, no corrosion', color: 'emerald' }
+              ].map((item, idx) => (
+                <div key={idx} className="bg-black/30 border border-white/5 rounded-xl p-4 flex flex-col justify-between">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <span className="font-bold text-white text-sm">{item.title}</span>
+                    <span
+                      className={`text-[10px] font-tech font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${
+                        item.status === 'pass'
+                          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                          : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                      }`}
+                    >
+                      {item.status}
+                    </span>
+                  </div>
+                  <p className="text-xs text-neutral-400">{item.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB: QUOTATIONS & APPROVALS */}
+      {activeTab === 'quotations' && (
+        <div className="space-y-6">
+          <div className="bg-[#12161f] border border-white/10 rounded-2xl p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-5">
+              <div>
+                <span className="text-xs font-tech font-bold uppercase tracking-widest text-[#ff5500]">
+                  Job Approvals & Additional Work
+                </span>
+                <h3 className="text-xl font-bold text-white mt-1">Authorize Additional Parts & Repairs</h3>
+                <p className="text-xs text-neutral-400">
+                  During inspection, our technician may identify worn components. Review transparent pricing and approve or decline with 1-click.
+                </p>
+              </div>
+            </div>
+
+            {/* List all additional work from job cards */}
+            {(() => {
+              const allAdditionalWork = jobCards.flatMap((job) =>
+                (job.additionalWork || []).map((work) => ({
+                  ...work,
+                  jobCardId: job.id,
+                  jobCardNumber: job.jobCardNumber,
+                  vehicle: `${job.vehicleBrand} ${job.vehicleModel}`
+                }))
+              );
+
+              if (allAdditionalWork.length === 0) {
+                return (
+                  <div className="py-16 text-center space-y-3">
+                    <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto opacity-70" />
+                    <h4 className="text-lg font-bold text-white">No Pending Authorizations</h4>
+                    <p className="text-xs text-neutral-400 max-w-md mx-auto">
+                      All work on your vehicle is currently authorized and proceeding according to the primary estimate.
+                    </p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="divide-y divide-white/10 mt-4">
+                  {allAdditionalWork.map((item) => (
+                    <div key={item.id} className="py-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      <div className="space-y-1 max-w-xl">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-mono font-bold text-[#ff5500]">{item.jobCardNumber}</span>
+                          <span className="text-xs text-neutral-400">• {item.vehicle}</span>
+                          <span
+                            className={`text-[10px] font-tech font-bold uppercase px-2 py-0.5 rounded border ${
+                              item.status === 'approved'
+                                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                : item.status === 'rejected'
+                                ? 'bg-red-500/10 text-red-400 border-red-500/20'
+                                : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                            }`}
+                          >
+                            {item.status.replace(/_/g, ' ')}
+                          </span>
+                        </div>
+                        <h4 className="font-bold text-white text-base">{item.description}</h4>
+                        <p className="text-xs text-neutral-400">Diagnostic finding: {item.reason}</p>
+                        <div className="flex items-center gap-4 text-xs font-mono text-neutral-300 pt-1">
+                          <span>Parts: ₹{item.partsCost.toLocaleString('en-IN')}</span>
+                          <span>Labour: ₹{item.labourCost.toLocaleString('en-IN')}</span>
+                          <span>GST (18%): ₹{Math.round((item.partsCost + item.labourCost) * 0.18).toLocaleString('en-IN')}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <div className="text-right mr-3">
+                          <span className="text-[10px] font-tech uppercase text-neutral-400 block">Total Est.</span>
+                          <span className="text-lg font-bold font-mono text-white">
+                            ₹{(item.partsCost + item.labourCost + Math.round((item.partsCost + item.labourCost) * 0.18)).toLocaleString('en-IN')}
+                          </span>
+                        </div>
+
+                        {item.status === 'pending' && (
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleRespondAdditionalWork(item.jobCardId, item.id, 'approved')}
+                              className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-black font-tech font-bold text-xs uppercase flex items-center gap-1.5 shadow"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                              <span>Approve</span>
+                            </button>
+                            <button
+                              onClick={() => handleRespondAdditionalWork(item.jobCardId, item.id, 'rejected')}
+                              className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white font-tech text-xs uppercase flex items-center gap-1.5 border border-white/10"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                              <span>Decline</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
+      {/* TAB: SERVICE REMINDERS */}
+      {activeTab === 'reminders' && (
+        <div className="space-y-6">
+          <div className="bg-[#12161f] border border-white/10 rounded-2xl p-6">
+            <div className="border-b border-white/10 pb-5">
+              <span className="text-xs font-tech font-bold uppercase tracking-widest text-[#ff5500]">
+                Automated Preventive Maintenance
+              </span>
+              <h3 className="text-xl font-bold text-white mt-1">Vehicle Health & Compliance Reminders</h3>
+              <p className="text-xs text-neutral-400">
+                Track compliance certificates, warranty requirements, and maintenance intervals for your garage fleet.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+              {[
+                {
+                  title: 'Periodic Scheduled Service',
+                  due: 'Due in 24 Days or 1,250 km',
+                  badge: 'Upcoming',
+                  badgeColor: 'amber',
+                  desc: 'Engine oil change, oil filter, air filter cleaning, 40-point safety check.',
+                  action: 'Book Service Bay'
+                },
+                {
+                  title: 'Comprehensive Insurance Expiry',
+                  due: 'Expires: 18 April 2026',
+                  badge: 'Active',
+                  badgeColor: 'emerald',
+                  desc: 'Zero depreciation + engine protect policy. 0% No-claim bonus lock.',
+                  action: 'Assistance via WhatsApp'
+                },
+                {
+                  title: 'Pollution Under Control (PUC)',
+                  due: 'Expires in 14 Days (Mandatory)',
+                  badge: 'Action Required',
+                  badgeColor: 'red',
+                  desc: 'Government mandated emissions certificate required for road legality.',
+                  action: 'Renew with Service'
+                },
+                {
+                  title: 'Brake Fluid Moisture Test',
+                  due: 'Recommended every 24 Months',
+                  badge: 'Preventive',
+                  badgeColor: 'blue',
+                  desc: 'Hygroscopic moisture saturation check prevents brake fade under heavy braking.',
+                  action: 'Schedule Check'
+                }
+              ].map((rem, idx) => (
+                <div key={idx} className="bg-black/30 border border-white/10 rounded-xl p-5 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <h4 className="font-bold text-white text-base">{rem.title}</h4>
+                      <span className="text-[10px] font-tech font-bold uppercase px-2 py-0.5 rounded bg-white/5 border border-white/10 text-neutral-300">
+                        {rem.badge}
+                      </span>
+                    </div>
+                    <div className="text-xs font-mono font-bold text-[#ff5500] mb-2">{rem.due}</div>
+                    <p className="text-xs text-neutral-400 mb-4">{rem.desc}</p>
+                  </div>
+                  <button
+                    onClick={() => navigate('/book-service')}
+                    className="self-start px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-neutral-200 hover:text-white font-tech text-xs uppercase tracking-wider border border-white/10"
+                  >
+                    {rem.action}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB: OFFERS & COUPONS */}
+      {activeTab === 'offers' && (
+        <div className="space-y-6">
+          <div className="bg-[#12161f] border border-white/10 rounded-2xl p-6">
+            <div className="border-b border-white/10 pb-5">
+              <span className="text-xs font-tech font-bold uppercase tracking-widest text-[#ff5500]">
+                Exclusive Member Benefits
+              </span>
+              <h3 className="text-xl font-bold text-white mt-1">Owner Privileges & Workshop Vouchers</h3>
+              <p className="text-xs text-neutral-400">
+                Apply these codes during booking or show them at reception to redeem discounts.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+              {[
+                {
+                  code: 'TORQX10',
+                  title: '10% Off Periodic Service',
+                  min: 'Min booking ₹4,500',
+                  valid: 'Valid until 31 Dec 2026',
+                  desc: 'Applies to Motul synthetic oil service packages on German, British, and Japanese sedans.'
+                },
+                {
+                  code: 'APEXCERAMIC',
+                  title: '₹2,000 Off Ceramic Shield',
+                  min: '9H Triple Layer Coating',
+                  valid: 'Valid until 31 Dec 2026',
+                  desc: 'Complimentary interior leather conditioning included with exterior ceramic package.'
+                },
+                {
+                  code: 'FREEPUC',
+                  title: 'Free PUC Certificate',
+                  min: 'With Any Major Service',
+                  valid: 'Ongoing Member Benefit',
+                  desc: 'Government registered emissions test and certificate included with periodic maintenance.'
+                }
+              ].map((offer, idx) => (
+                <div key={idx} className="bg-gradient-to-br from-black/40 to-black/20 border border-white/10 rounded-xl p-5 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-xs font-tech uppercase text-neutral-400">{offer.valid}</span>
+                      <span className="px-2 py-0.5 rounded bg-[#ff5500]/15 text-[#ff5500] font-tech text-[10px] font-bold uppercase">
+                        Active
+                      </span>
+                    </div>
+                    <div className="p-2.5 rounded-lg bg-black/60 border border-dashed border-white/20 font-mono font-bold text-base text-center text-amber-400 tracking-wider mb-3">
+                      {offer.code}
+                    </div>
+                    <h4 className="font-bold text-white text-sm mb-1">{offer.title}</h4>
+                    <p className="text-xs text-neutral-400 mb-2">{offer.desc}</p>
+                    <span className="text-[11px] text-neutral-500 font-mono block mb-4">{offer.min}</span>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(offer.code);
+                      setCouponCopied(offer.code);
+                      setTimeout(() => setCouponCopied(null), 2500);
+                    }}
+                    className="w-full py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white font-tech text-xs uppercase tracking-wider border border-white/10"
+                  >
+                    {couponCopied === offer.code ? '✓ Code Copied!' : 'Copy Promo Code'}
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}

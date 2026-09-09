@@ -25,6 +25,10 @@ export class InvoiceService {
     return all.find((inv) => inv.bookingId.toLowerCase() === bookingId.toLowerCase());
   }
 
+  public static getInvoiceByBooking(bookingId: string): Invoice | undefined {
+    return this.getInvoiceByBookingId(bookingId);
+  }
+
   public static createInvoiceFromBooking(booking: Booking): Invoice {
     const all = this.getAllInvoices();
     const existing = all.find((inv) => inv.bookingId === booking.id);

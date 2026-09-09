@@ -19,7 +19,18 @@ import {
   Plus,
   ArrowUpRight,
   RefreshCw,
-  Edit2
+  Edit2,
+  FileText,
+  Package,
+  Navigation,
+  History,
+  AlertTriangle,
+  Check,
+  Truck,
+  Eye,
+  LogOut,
+  X,
+  FileCheck
 } from 'lucide-react';
 import {
   Booking,
@@ -28,13 +39,22 @@ import {
   Technician,
   Invoice,
   Coupon,
-  ReviewItem
+  ReviewItem,
+  JobCard,
+  InventoryPart,
+  PickupDropRequest,
+  AuditLog
 } from '../types';
 import { BookingService } from '../services/bookingService';
 import { StorageService, STORAGE_KEYS } from '../services/storageService';
 import { COMPREHENSIVE_SERVICES } from '../data/pricingData';
 import { VEHICLE_DATABASE } from '../data/vehicleData';
 import { PricingService } from '../services/pricingService';
+import { JobCardService } from '../services/jobCardService';
+import { InventoryService } from '../services/inventoryService';
+import { PickupDropService } from '../services/pickupDropService';
+import { AuditService } from '../services/auditService';
+import { AuthService } from '../services/authService';
 
 export const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -46,6 +66,11 @@ export const AdminDashboard: React.FC = () => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [reviews, setReviews] = useState<ReviewItem[]>([]);
+  const [jobCards, setJobCards] = useState<JobCard[]>([]);
+  const [inventoryParts, setInventoryParts] = useState<InventoryPart[]>([]);
+  const [pickupRequests, setPickupRequests] = useState<PickupDropRequest[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [selectedJobCard, setSelectedJobCard] = useState<JobCard | null>(null);
 
   // Search & Filter
   const [searchQuery, setSearchQuery] = useState('');
@@ -63,6 +88,23 @@ export const AdminDashboard: React.FC = () => {
   const [newCouponType, setNewCouponType] = useState<'percentage' | 'flat'>('percentage');
   const [newCouponMin, setNewCouponMin] = useState(2500);
 
+  // Add Part Modal
+  const [showAddPartModal, setShowAddPartModal] = useState(false);
+  const [newPartSku, setNewPartSku] = useState('');
+  const [newPartName, setNewPartName] = useState('');
+  const [newPartCategory, setNewPartCategory] = useState<'brakes' | 'filters' | 'fluids' | 'suspension' | 'electrical' | 'engine' | 'tyres'>('fluids');
+  const [newPartStock, setNewPartStock] = useState(12);
+  const [newPartMin, setNewPartMin] = useState(4);
+  const [newPartCost, setNewPartCost] = useState(1200);
+  const [newPartPrice, setNewPartPrice] = useState(1800);
+  const [newPartLocation, setNewPartLocation] = useState('Bay Shelf A-02');
+  const [newPartBrand, setNewPartBrand] = useState('Motul OEM');
+
+  // Assign Driver Modal
+  const [driverModalRequest, setDriverModalRequest] = useState<PickupDropRequest | null>(null);
+  const [driverName, setDriverName] = useState('Sanjay Patil');
+  const [driverPhone, setDriverPhone] = useState('+91 98220 54321');
+
   const loadAll = () => {
     setBookings(BookingService.getAllBookings());
     setBays(StorageService.get<ServiceBay[]>(STORAGE_KEYS.BAYS, []));
@@ -70,6 +112,10 @@ export const AdminDashboard: React.FC = () => {
     setInvoices(StorageService.get<Invoice[]>(STORAGE_KEYS.INVOICES, []));
     setCoupons(StorageService.get<Coupon[]>(STORAGE_KEYS.COUPONS, []));
     setReviews(StorageService.get<ReviewItem[]>(STORAGE_KEYS.REVIEWS, []));
+    setJobCards(JobCardService.getAllJobCards());
+    setInventoryParts(InventoryService.getAllParts());
+    setPickupRequests(PickupDropService.getAllRequests());
+    setAuditLogs(AuditService.getAllLogs());
   };
 
   useEffect(() => {
@@ -77,6 +123,70 @@ export const AdminDashboard: React.FC = () => {
     window.addEventListener('storage', loadAll);
     return () => window.removeEventListener('storage', loadAll);
   }, []);
+
+  const handleConvertToJobCard = (booking: Booking) => {
+    const existing = jobCards.find(j => j.bookingId === booking.id);
+    if (existing) {
+      setSelectedJobCard(existing);
+      setActiveTab('job-cards');
+      return;
+    }
+    const assignedTech = technicians[0]?.id || 'TECH-001';
+    const assignedBay = booking.bayNumber || 'Bay 01';
+    const newJobCard = JobCardService.createJobCardFromBooking(booking, assignedTech, assignedBay);
+    loadAll();
+    setSelectedJobCard(newJobCard);
+    setActiveTab('job-cards');
+  };
+
+  const handleUpdateJobCardStatus = (jobCardId: string, status: any) => {
+    JobCardService.updateJobCardStatus(jobCardId, status);
+    loadAll();
+  };
+
+  const handleAdjustPartStock = (partId: string, delta: number) => {
+    const part = inventoryParts.find((p) => p.id === partId);
+    if (part) {
+      InventoryService.adjustStock(partId, Math.max(0, part.stockQuantity + delta), 'Manual Workshop Inventory Adjustment');
+      loadAll();
+    }
+  };
+
+  const handleCreatePart = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPartSku.trim() || !newPartName.trim()) return;
+    InventoryService.addPart({
+      partNumber: newPartSku.trim().toUpperCase(),
+      name: newPartName.trim(),
+      category: newPartCategory,
+      brand: newPartBrand,
+      compatibleVehicles: ['BMW', 'Audi', 'Mercedes-Benz', 'Skoda', 'Volkswagen', 'Porsche'],
+      supplier: 'Apex Auto Wholesale Dist.',
+      purchasePrice: Number(newPartCost),
+      sellingPrice: Number(newPartPrice),
+      gst: 18,
+      stockQuantity: Number(newPartStock),
+      minStock: Number(newPartMin),
+      warehouseLocation: newPartLocation
+    });
+    setShowAddPartModal(false);
+    setNewPartSku('');
+    setNewPartName('');
+    loadAll();
+  };
+
+  const handleAssignDriverSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!driverModalRequest) return;
+    PickupDropService.assignDriver(driverModalRequest.id, driverName, driverPhone);
+    setDriverModalRequest(null);
+    loadAll();
+  };
+
+  const handleAdvancePickupStatus = (requestId: string, nextStatus: any) => {
+    PickupDropService.updateStatus(requestId, nextStatus);
+    loadAll();
+  };
 
   // Update booking status from admin
   const handleStatusChange = (bookingId: string, newStatus: ServiceStatus) => {
@@ -186,42 +296,57 @@ export const AdminDashboard: React.FC = () => {
             className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-tech text-xs uppercase tracking-wider flex items-center gap-2"
           >
             <Car className="w-4 h-4 text-[#ff5500]" />
-            <span>Open Customer Tracker</span>
+            <span>Customer Tracker</span>
+          </button>
+          <button
+            onClick={() => {
+              AuthService.logout();
+              navigate('/login');
+            }}
+            className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-neutral-300 hover:text-white font-tech text-xs uppercase tracking-wider border border-white/10 transition-all flex items-center gap-2"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Sign Out</span>
           </button>
         </div>
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {[
-          { label: 'Total Bookings', val: bookings.length, sub: 'All recorded jobs' },
-          { label: 'In Garage Bays', val: bays.filter((b) => b.status === 'occupied').length, sub: `${bays.length} active lifts` },
-          { label: 'Master Techs', val: technicians.length, sub: 'Certified engineers' },
-          { label: 'Gross Revenue', val: `₹${invoices.reduce((acc, i) => acc + i.total, 0).toLocaleString('en-IN')}`, sub: 'Billed invoices' },
-          { label: 'Active Promo Codes', val: coupons.length, sub: 'Valid marketing vouchers' }
+          { label: 'Total Bookings', val: bookings.length, sub: 'All client requests' },
+          { label: 'Active Job Cards', val: jobCards.filter((j) => j.status !== 'delivered' && j.status !== 'cancelled').length, sub: 'In workshop pipeline' },
+          { label: 'Bays Occupied', val: `${bays.filter((b) => b.status === 'occupied').length} / ${bays.length}`, sub: 'Hydraulic lifts active' },
+          { label: 'Low Stock Alerts', val: inventoryParts.filter((p) => p.quantity <= p.minThreshold).length, sub: 'Restock required', alert: inventoryParts.some((p) => p.quantity <= p.minThreshold) },
+          { label: 'Gross Revenue', val: `₹${invoices.reduce((acc, i) => acc + i.total, 0).toLocaleString('en-IN')}`, sub: 'Billed & GST paid' },
+          { label: 'Master Techs', val: technicians.length, sub: 'On shift roster' }
         ].map((kpi, i) => (
-          <div key={i} className="bg-[#12161f] border border-white/10 rounded-xl p-5">
-            <span className="text-xs font-tech uppercase tracking-wider text-neutral-400 block">
+          <div key={i} className={`bg-[#12161f] border rounded-xl p-4 ${kpi.alert ? 'border-amber-500/50 bg-amber-500/5' : 'border-white/10'}`}>
+            <span className="text-[11px] font-tech uppercase tracking-wider text-neutral-400 block truncate">
               {kpi.label}
             </span>
             <span className="text-xl sm:text-2xl font-extrabold text-white font-tech my-1 block">
               {kpi.val}
             </span>
-            <span className="text-[11px] text-neutral-500">{kpi.sub}</span>
+            <span className={`text-[10px] truncate block ${kpi.alert ? 'text-amber-400 font-bold' : 'text-neutral-500'}`}>{kpi.sub}</span>
           </div>
         ))}
       </div>
 
       {/* Admin Tabs */}
-      <div className="flex border-b border-white/10 gap-2 overflow-x-auto pb-1">
+      <div className="flex border-b border-white/10 gap-1 overflow-x-auto pb-1">
         {[
-          { id: 'bookings', label: `Service Bookings (${bookings.length})`, icon: Calendar },
-          { id: 'bays', label: `Workshop Bays Floorplan (${bays.length})`, icon: Layers },
-          { id: 'pricing', label: 'Dynamic Pricing Matrix', icon: DollarSign },
-          { id: 'technicians', label: `Technicians Roster (${technicians.length})`, icon: Users },
-          { id: 'invoices', label: `Invoices & Billing (${invoices.length})`, icon: DollarSign },
-          { id: 'coupons', label: `Coupons & Offers (${coupons.length})`, icon: Tag },
-          { id: 'reviews', label: `Customer Reviews (${reviews.length})`, icon: Star }
+          { id: 'bookings', label: `Bookings (${bookings.length})`, icon: Calendar },
+          { id: 'job-cards', label: `Job Cards (${jobCards.length})`, icon: FileText },
+          { id: 'inventory', label: `Parts & Stock (${inventoryParts.length})`, icon: Package },
+          { id: 'pickup-drop', label: `Valet Logistics (${pickupRequests.length})`, icon: Truck },
+          { id: 'bays', label: `Workshop Bays (${bays.length})`, icon: Layers },
+          { id: 'pricing', label: 'Dynamic Pricing', icon: DollarSign },
+          { id: 'technicians', label: `Technicians (${technicians.length})`, icon: Users },
+          { id: 'invoices', label: `Invoices (${invoices.length})`, icon: FileCheck },
+          { id: 'coupons', label: `Coupons (${coupons.length})`, icon: Tag },
+          { id: 'reviews', label: `Reviews (${reviews.length})`, icon: Star },
+          { id: 'audit', label: `Audit Trail (${auditLogs.length})`, icon: History }
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -229,13 +354,13 @@ export const AdminDashboard: React.FC = () => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-3 font-tech text-xs uppercase tracking-wider border-b-2 transition-all shrink-0 ${
+              className={`flex items-center gap-1.5 px-3.5 py-2.5 font-tech text-xs uppercase tracking-wider border-b-2 transition-all shrink-0 ${
                 isActive
                   ? 'border-amber-400 text-white font-bold bg-white/5'
                   : 'border-transparent text-neutral-400 hover:text-white hover:bg-white/5'
               }`}
             >
-              <Icon className={`w-4 h-4 ${isActive ? 'text-amber-400' : 'text-neutral-500'}`} />
+              <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-amber-400' : 'text-neutral-500'}`} />
               <span>{tab.label}</span>
             </button>
           );
@@ -376,13 +501,371 @@ export const AdminDashboard: React.FC = () => {
                     </td>
 
                     <td className="py-3.5 px-3 text-center">
-                      <button
-                        onClick={() => navigate(`/service/${b.id}`)}
-                        className="p-1 text-neutral-400 hover:text-white"
-                        title="View Live Tracker"
-                      >
-                        <ArrowUpRight className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          onClick={() => handleConvertToJobCard(b)}
+                          className="px-2.5 py-1 rounded-lg bg-[#ff5500]/15 hover:bg-[#ff5500]/25 text-[#ff5500] hover:text-white border border-[#ff5500]/30 font-tech text-[10px] font-bold uppercase tracking-wider transition-colors whitespace-nowrap"
+                          title="Generate workshop job card"
+                        >
+                          {jobCards.some((j) => j.bookingId === b.id) ? 'Job Card ✓' : '+ Job Card'}
+                        </button>
+                        <button
+                          onClick={() => navigate(`/service/${b.id}`)}
+                          className="p-1.5 rounded bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white"
+                          title="View Live Tracker"
+                        >
+                          <ArrowUpRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* TAB: JOB CARDS & WORK ORDERS */}
+      {activeTab === 'job-cards' && (
+        <div className="bg-[#12161f] border border-white/10 rounded-2xl p-6 sm:p-8 space-y-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/10 pb-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-amber-400" />
+                <h3 className="text-xl font-bold text-white">Workshop Job Cards & Work Orders</h3>
+              </div>
+              <p className="text-xs text-neutral-400 mt-0.5">
+                Manage live technician execution, parts requisition, and customer additional work approvals.
+              </p>
+            </div>
+            <span className="text-xs font-mono px-3 py-1 rounded bg-amber-400/10 text-amber-400 border border-amber-400/20 font-bold">
+              Total Active: {jobCards.filter((j) => j.status !== 'delivered').length} Cards
+            </span>
+          </div>
+
+          {jobCards.length === 0 ? (
+            <div className="py-16 text-center space-y-3">
+              <FileText className="w-12 h-12 text-neutral-500 mx-auto" />
+              <h4 className="text-lg font-bold text-white">No Job Cards Generated Yet</h4>
+              <p className="text-xs text-neutral-400 max-w-md mx-auto">
+                Go to the "Bookings" tab and click "+ Job Card" on any booking to generate a full workshop work order.
+              </p>
+              <button
+                onClick={() => setActiveTab('bookings')}
+                className="px-4 py-2 rounded-xl bg-amber-500 text-black font-tech font-bold text-xs uppercase"
+              >
+                Go to Bookings
+              </button>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-white/10 text-neutral-400 font-tech uppercase tracking-wider">
+                    <th className="py-3 px-3">Job Card #</th>
+                    <th className="py-3 px-3">Customer & Contact</th>
+                    <th className="py-3 px-3">Vehicle</th>
+                    <th className="py-3 px-3">Assigned Tech</th>
+                    <th className="py-3 px-3">Bay</th>
+                    <th className="py-3 px-3">Status Pipeline</th>
+                    <th className="py-3 px-3 text-right">Parts + Labour</th>
+                    <th className="py-3 px-3 text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {jobCards.map((jc) => {
+                    const totalParts = (jc.partsRequired || []).reduce((sum, p) => sum + (p.total || p.unitPrice * p.quantity), 0);
+                    const totalLabour = (jc.labour || []).reduce((sum, l) => sum + (l.total || l.ratePerHour * l.hours), 0);
+                    const totalAddl = (jc.additionalWork || [])
+                      .filter((w) => w.status === 'approved')
+                      .reduce((sum, w) => sum + w.partsCost + w.labourCost + (w.gst || 0), 0);
+                    const totalCost = totalParts + totalLabour + totalAddl;
+
+                    return (
+                      <tr key={jc.id} className="hover:bg-white/5 transition-colors">
+                        <td className="py-3.5 px-3">
+                          <span className="font-mono font-bold text-amber-400 block">{jc.jobCardNumber}</span>
+                          <span className="text-[10px] text-neutral-500 font-tech">Ref: {jc.bookingId}</span>
+                        </td>
+                        <td className="py-3.5 px-3">
+                          <strong className="text-white block">{jc.customerName}</strong>
+                          <span className="text-neutral-400 text-[11px] font-mono">{jc.customerPhone}</span>
+                        </td>
+                        <td className="py-3.5 px-3">
+                          <span className="text-white block font-medium">
+                            {jc.vehicleBrand} {jc.vehicleModel}
+                          </span>
+                          <span className="text-neutral-400 text-[10px] font-mono">{jc.vehicleRegNumber}</span>
+                        </td>
+                        <td className="py-3.5 px-3">
+                          <span className="text-white font-tech text-xs block">{jc.assignedTechnicianName}</span>
+                          <span className="text-[10px] text-neutral-500">ID: {jc.assignedTechnicianId}</span>
+                        </td>
+                        <td className="py-3.5 px-3">
+                          <span className="px-2 py-0.5 rounded bg-black/60 border border-white/10 font-mono text-white text-[11px]">
+                            {jc.serviceBay}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-3">
+                          <select
+                            value={jc.jobStatus}
+                            onChange={(e) => handleUpdateJobCardStatus(jc.id, e.target.value)}
+                            className="bg-black/60 border border-white/10 rounded px-2 py-1 text-white font-tech text-[11px] font-bold uppercase"
+                          >
+                            <option value="OPEN">Open</option>
+                            <option value="VEHICLE_RECEIVED">Vehicle Received</option>
+                            <option value="INSPECTION">Inspection</option>
+                            <option value="DIAGNOSIS">Diagnosis</option>
+                            <option value="APPROVAL_PENDING">Approval Pending</option>
+                            <option value="WORK_IN_PROGRESS">Work In Progress</option>
+                            <option value="QUALITY_CHECK">Quality Check</option>
+                            <option value="READY_FOR_DELIVERY">Ready For Delivery</option>
+                            <option value="COMPLETED">Completed</option>
+                          </select>
+                        </td>
+                        <td className="py-3.5 px-3 text-right font-mono font-bold text-white">
+                          ₹{totalCost.toLocaleString('en-IN')}
+                        </td>
+                        <td className="py-3.5 px-3 text-center">
+                          <button
+                            onClick={() => setSelectedJobCard(jc)}
+                            className="px-2.5 py-1 rounded bg-white/10 hover:bg-white/20 text-white font-tech text-[11px] uppercase tracking-wider flex items-center gap-1 mx-auto"
+                          >
+                            <Eye className="w-3 h-3" />
+                            <span>Details</span>
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB: PARTS & INVENTORY MANAGEMENT */}
+      {activeTab === 'inventory' && (
+        <div className="bg-[#12161f] border border-white/10 rounded-2xl p-6 sm:p-8 space-y-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/10 pb-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <Package className="w-5 h-5 text-amber-400" />
+                <h3 className="text-xl font-bold text-white">Parts & Inventory Management</h3>
+              </div>
+              <p className="text-xs text-neutral-400 mt-0.5">
+                Real-time stock tracking, OEM spares catalog, reorder threshold alerts, and bin locations.
+              </p>
+            </div>
+            <button
+              onClick={() => setShowAddPartModal(true)}
+              className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-black font-tech font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 shadow"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add OEM Part</span>
+            </button>
+          </div>
+
+          {/* Low Stock Warning Banner */}
+          {inventoryParts.some((p) => p.stockQuantity <= p.minStock) && (
+            <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
+                <div>
+                  <h4 className="text-sm font-bold text-white">Critical Low Stock Warning</h4>
+                  <p className="text-xs text-neutral-300">
+                    {inventoryParts.filter((p) => p.stockQuantity <= p.minStock).length} parts have fallen below workshop reorder thresholds.
+                  </p>
+                </div>
+              </div>
+              <span className="px-3 py-1 rounded bg-amber-500/20 text-amber-400 font-tech font-bold text-[11px] uppercase">
+                PO Generation Required
+              </span>
+            </div>
+          )}
+
+          {/* Inventory Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-white/10 text-neutral-400 font-tech uppercase tracking-wider">
+                  <th className="py-3 px-3">SKU & Code</th>
+                  <th className="py-3 px-3">Part Name & Brand</th>
+                  <th className="py-3 px-3">Category</th>
+                  <th className="py-3 px-3">In Stock</th>
+                  <th className="py-3 px-3">Unit Cost</th>
+                  <th className="py-3 px-3">Selling Price</th>
+                  <th className="py-3 px-3">Bin Location</th>
+                  <th className="py-3 px-3 text-center">Quick Stock Adjust</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {inventoryParts.map((part) => {
+                  const isLow = part.stockQuantity <= part.minStock;
+                  return (
+                    <tr key={part.id} className="hover:bg-white/5 transition-colors">
+                      <td className="py-3.5 px-3">
+                        <span className="font-mono font-bold text-white block">{part.partNumber}</span>
+                        <span className="text-[10px] text-neutral-500">Min: {part.minStock}</span>
+                      </td>
+                      <td className="py-3.5 px-3">
+                        <strong className="text-white block">{part.name}</strong>
+                        <span className="text-neutral-400 text-[11px]">{part.brand}</span>
+                      </td>
+                      <td className="py-3.5 px-3">
+                        <span className="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[10px] font-tech uppercase text-neutral-300">
+                          {part.category}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-3">
+                        <span
+                          className={`font-mono font-bold px-2 py-0.5 rounded ${
+                            isLow ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-emerald-500/20 text-emerald-400'
+                          }`}
+                        >
+                          {part.stockQuantity} units
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-3 font-mono text-neutral-300">
+                        ₹{part.purchasePrice.toLocaleString('en-IN')}
+                      </td>
+                      <td className="py-3.5 px-3 font-mono font-bold text-white">
+                        ₹{part.sellingPrice.toLocaleString('en-IN')}
+                      </td>
+                      <td className="py-3.5 px-3 font-mono text-neutral-400">{part.warehouseLocation}</td>
+                      <td className="py-3.5 px-3 text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            onClick={() => handleAdjustPartStock(part.id, -1)}
+                            className="w-7 h-7 rounded bg-white/5 hover:bg-white/10 text-white font-mono font-bold border border-white/10"
+                            title="Decrement stock (-1)"
+                          >
+                            -
+                          </button>
+                          <button
+                            onClick={() => handleAdjustPartStock(part.id, 1)}
+                            className="w-7 h-7 rounded bg-white/5 hover:bg-white/10 text-white font-mono font-bold border border-white/10"
+                            title="Increment stock (+1)"
+                          >
+                            +
+                          </button>
+                          <button
+                            onClick={() => handleAdjustPartStock(part.id, 10)}
+                            className="px-2 h-7 rounded bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 font-tech text-[10px] uppercase border border-amber-500/20 ml-1"
+                            title="Restock bundle (+10)"
+                          >
+                            +10
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* TAB: VALET LOGISTICS (PICKUP & DROP) */}
+      {activeTab === 'pickup-drop' && (
+        <div className="bg-[#12161f] border border-white/10 rounded-2xl p-6 sm:p-8 space-y-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/10 pb-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <Truck className="w-5 h-5 text-amber-400" />
+                <h3 className="text-xl font-bold text-white">Valet Pickup & Doorstep Delivery Logistics</h3>
+              </div>
+              <p className="text-xs text-neutral-400 mt-0.5">
+                Real-time concierge dispatch across Pune (Baner, Hinjawadi, Koregaon Park, Wakad).
+              </p>
+            </div>
+            <span className="text-xs font-mono px-3 py-1 rounded bg-white/5 text-neutral-300 border border-white/10">
+              Total Dispatches: {pickupRequests.length}
+            </span>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-white/10 text-neutral-400 font-tech uppercase tracking-wider">
+                  <th className="py-3 px-3">Request ID</th>
+                  <th className="py-3 px-3">Vehicle Details</th>
+                  <th className="py-3 px-3">Customer & Location</th>
+                  <th className="py-3 px-3">Date & Slot</th>
+                  <th className="py-3 px-3">Assigned Driver</th>
+                  <th className="py-3 px-3">Pipeline Status</th>
+                  <th className="py-3 px-3 text-center">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {pickupRequests.map((req) => (
+                  <tr key={req.id} className="hover:bg-white/5 transition-colors">
+                    <td className="py-3.5 px-3">
+                      <span className="font-mono font-bold text-white block">{req.id}</span>
+                      <span className="text-[10px] text-neutral-500">Booking: {req.bookingId}</span>
+                    </td>
+                    <td className="py-3.5 px-3">
+                      <strong className="text-white block">{req.vehicleInfo}</strong>
+                    </td>
+                    <td className="py-3.5 px-3">
+                      <strong className="text-white block">{req.customerName}</strong>
+                      <span className="text-neutral-400 text-[11px] block">{req.pickupAddress}</span>
+                      <span className="text-neutral-500 text-[10px] font-mono">{req.customerPhone}</span>
+                    </td>
+                    <td className="py-3.5 px-3 font-mono text-neutral-300">
+                      <div>{req.date}</div>
+                      <div className="text-neutral-500 text-[10px]">{req.time}</div>
+                    </td>
+                    <td className="py-3.5 px-3">
+                      {req.driverName ? (
+                        <div>
+                          <span className="text-white font-bold block">{req.driverName}</span>
+                          <span className="text-[10px] font-mono text-neutral-400">{req.driverPhone}</span>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setDriverModalRequest(req)}
+                          className="px-2 py-1 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30 font-tech text-[10px] uppercase font-bold"
+                        >
+                          + Assign Driver
+                        </button>
+                      )}
+                    </td>
+                    <td className="py-3.5 px-3">
+                      <span className="px-2 py-0.5 rounded bg-black/60 border border-white/10 font-tech text-[10px] uppercase font-bold text-white">
+                        {req.status.replace(/_/g, ' ')}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-3 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <button
+                          onClick={() => setDriverModalRequest(req)}
+                          className="px-2 py-1 rounded bg-white/5 hover:bg-white/10 text-neutral-300 font-tech text-[10px] uppercase border border-white/10"
+                        >
+                          Reassign
+                        </button>
+                        {req.status !== 'DELIVERED' && (
+                          <button
+                            onClick={() => {
+                              const nextMap: Record<string, any> = {
+                                REQUESTED: 'DRIVER_ASSIGNED',
+                                DRIVER_ASSIGNED: 'DRIVER_EN_ROUTE',
+                                DRIVER_EN_ROUTE: 'VEHICLE_PICKED_UP',
+                                VEHICLE_PICKED_UP: 'AT_WORKSHOP',
+                                AT_WORKSHOP: 'READY_FOR_DROP',
+                                READY_FOR_DROP: 'DELIVERED'
+                              };
+                              handleAdvancePickupStatus(req.id, nextMap[req.status] || 'DELIVERED');
+                            }}
+                            className="px-2 py-1 rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 font-tech text-[10px] uppercase font-bold border border-emerald-500/30"
+                          >
+                            Advance ➔
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -821,6 +1304,414 @@ export const AdminDashboard: React.FC = () => {
                 </button>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 8: AUDIT TRAIL & SYSTEM LOGS */}
+      {activeTab === 'audit' && (
+        <div className="bg-[#12161f] border border-white/10 rounded-2xl p-6 sm:p-8 space-y-6">
+          <div className="flex justify-between items-center border-b border-white/10 pb-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <History className="w-5 h-5 text-amber-400" />
+                <h3 className="text-xl font-bold text-white">System Security & Operations Audit Trail</h3>
+              </div>
+              <p className="text-xs text-neutral-400 mt-0.5">
+                Immutable chronological log of all garage events, parts adjustments, approvals, and authorization sessions.
+              </p>
+            </div>
+            <span className="text-xs font-mono px-3 py-1 rounded bg-white/5 text-neutral-400 border border-white/10">
+              Total Log Entries: {auditLogs.length}
+            </span>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-white/10 text-neutral-400 font-tech uppercase tracking-wider">
+                  <th className="py-3 px-3">Timestamp</th>
+                  <th className="py-3 px-3">User & Role</th>
+                  <th className="py-3 px-3">Action Type</th>
+                  <th className="py-3 px-3">Target Entity</th>
+                  <th className="py-3 px-3">Operational Details</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {auditLogs.map((log) => (
+                  <tr key={log.id} className="hover:bg-white/5 transition-colors">
+                    <td className="py-3.5 px-3 font-mono text-neutral-400 text-[11px] whitespace-nowrap">
+                      {log.timestamp}
+                    </td>
+                    <td className="py-3.5 px-3">
+                      <strong className="text-white block">{log.userName}</strong>
+                      <span className="text-[10px] font-tech uppercase px-1.5 py-0.2 rounded bg-white/10 text-neutral-300">
+                        {log.userRole}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-3">
+                      <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded bg-amber-400/10 text-amber-400 border border-amber-400/20">
+                        {log.action}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-3">
+                      <span className="font-tech text-white uppercase text-[11px] block">{log.entity}</span>
+                      <span className="text-neutral-500 font-mono text-[10px]">{log.entityId}</span>
+                    </td>
+                    <td className="py-3.5 px-3 text-neutral-300 max-w-md">
+                      {log.details}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* JOB CARD DETAILS MODAL */}
+      {selectedJobCard && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#12161f] border border-white/15 rounded-2xl max-w-3xl w-full p-6 sm:p-8 space-y-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-start border-b border-white/10 pb-4">
+              <div>
+                <span className="text-xs font-tech uppercase text-amber-400 font-bold tracking-widest block">
+                  Official Workshop Job Order
+                </span>
+                <h3 className="text-2xl font-mono font-extrabold text-white">
+                  Job Card #{selectedJobCard.jobCardNumber}
+                </h3>
+                <p className="text-xs text-neutral-400 mt-1">
+                  Linked to Service Booking ID: <strong className="text-white font-mono">{selectedJobCard.bookingId}</strong>
+                </p>
+              </div>
+              <button
+                onClick={() => setSelectedJobCard(null)}
+                className="p-1 rounded-lg bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Vehicle & Customer Summary */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 rounded-xl bg-black/40 border border-white/10 text-xs">
+              <div>
+                <span className="text-neutral-500 block uppercase font-tech text-[10px]">Customer</span>
+                <strong className="text-white">{selectedJobCard.customerName}</strong>
+                <span className="text-neutral-400 block font-mono text-[11px]">{selectedJobCard.customerPhone}</span>
+              </div>
+              <div>
+                <span className="text-neutral-500 block uppercase font-tech text-[10px]">Vehicle</span>
+                <strong className="text-white">{selectedJobCard.vehicleBrand} {selectedJobCard.vehicleModel}</strong>
+                <span className="text-amber-400 block font-mono text-[11px]">{selectedJobCard.vehicleRegNumber}</span>
+              </div>
+              <div>
+                <span className="text-neutral-500 block uppercase font-tech text-[10px]">Assigned Tech</span>
+                <strong className="text-white">{selectedJobCard.assignedTechnicianName}</strong>
+                <span className="text-neutral-400 block text-[11px]">ID: {selectedJobCard.assignedTechnicianId}</span>
+              </div>
+              <div>
+                <span className="text-neutral-500 block uppercase font-tech text-[10px]">Service Bay</span>
+                <strong className="text-white font-mono">{selectedJobCard.serviceBay}</strong>
+                <span className="text-emerald-400 block uppercase font-tech text-[10px] font-bold">
+                  Status: {selectedJobCard.jobStatus.replace(/_/g, ' ')}
+                </span>
+              </div>
+            </div>
+
+            {/* Primary Work Description */}
+            <div className="p-4 rounded-xl bg-black/20 border border-white/10 space-y-1">
+              <span className="text-[10px] font-tech uppercase text-neutral-400 tracking-wider">Primary Scope & Customer Complaint</span>
+              <p className="text-xs text-white font-medium">{selectedJobCard.customerComplaint}</p>
+              {selectedJobCard.technicianDiagnosis && (
+                <p className="text-xs text-neutral-400 italic mt-2">Diagnosis: "{selectedJobCard.technicianDiagnosis}"</p>
+              )}
+            </div>
+
+            {/* Requisitioned Spares */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-tech uppercase tracking-wider text-amber-400 font-bold">
+                Requisitioned OEM Spares ({(selectedJobCard.partsRequired || []).length})
+              </h4>
+              <div className="overflow-x-auto border border-white/10 rounded-xl">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-black/40 text-neutral-400 font-tech uppercase text-[10px]">
+                    <tr>
+                      <th className="py-2.5 px-3">Part Name</th>
+                      <th className="py-2.5 px-3">Qty</th>
+                      <th className="py-2.5 px-3">Rate</th>
+                      <th className="py-2.5 px-3">Part #</th>
+                      <th className="py-2.5 px-3 text-right">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5 bg-black/20">
+                    {(selectedJobCard.partsRequired || []).map((p) => (
+                      <tr key={p.id}>
+                        <td className="py-2.5 px-3 text-white font-medium">{p.name}</td>
+                        <td className="py-2.5 px-3 font-mono text-neutral-300">{p.quantity}</td>
+                        <td className="py-2.5 px-3 font-mono text-neutral-400">₹{p.unitPrice.toLocaleString('en-IN')}</td>
+                        <td className="py-2.5 px-3 font-mono text-neutral-400">{p.partNumber || '-'}</td>
+                        <td className="py-2.5 px-3 text-right font-mono font-bold text-white">
+                          ₹{(p.total || p.unitPrice * p.quantity).toLocaleString('en-IN')}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Additional Work (if any) */}
+            {selectedJobCard.additionalWork && selectedJobCard.additionalWork.length > 0 && (
+              <div className="space-y-3">
+                <h4 className="text-xs font-tech uppercase tracking-wider text-purple-400 font-bold">
+                  Additional Work Approvals ({selectedJobCard.additionalWork.length})
+                </h4>
+                <div className="space-y-2">
+                  {selectedJobCard.additionalWork.map((w) => (
+                    <div
+                      key={w.id}
+                      className="p-3 rounded-xl bg-black/30 border border-white/10 flex justify-between items-center text-xs"
+                    >
+                      <div>
+                        <strong className="text-white block">{w.title}</strong>
+                        <p className="text-neutral-400 text-[11px]">{w.description}</p>
+                      </div>
+                      <div className="text-right">
+                        <span
+                          className={`text-[10px] font-tech uppercase font-bold px-2 py-0.5 rounded ${
+                            w.status === 'approved'
+                              ? 'bg-emerald-500/20 text-emerald-400'
+                              : w.status === 'rejected'
+                              ? 'bg-red-500/20 text-red-400'
+                              : 'bg-amber-500/20 text-amber-400'
+                          }`}
+                        >
+                          {w.status.replace(/_/g, ' ')}
+                        </span>
+                        <div className="font-mono font-bold text-white mt-1">
+                          ₹{(w.partsCost + w.labourCost).toLocaleString('en-IN')}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="pt-4 border-t border-white/10 flex justify-end gap-3">
+              <button
+                onClick={() => setSelectedJobCard(null)}
+                className="px-5 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white font-tech uppercase text-xs"
+              >
+                Close Job Card
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ADD OEM PART MODAL */}
+      {showAddPartModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#12161f] border border-white/15 rounded-2xl max-w-lg w-full p-6 space-y-5 shadow-2xl">
+            <div className="flex justify-between items-center border-b border-white/10 pb-3">
+              <div className="flex items-center gap-2">
+                <Package className="w-5 h-5 text-amber-400" />
+                <h3 className="font-bold text-lg text-white">Add OEM Spares to Workshop Inventory</h3>
+              </div>
+              <button onClick={() => setShowAddPartModal(false)} className="text-neutral-400 hover:text-white">
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleCreatePart} className="space-y-4 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-tech uppercase text-neutral-400 mb-1">Part SKU / Code</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. BRK-PAD-004"
+                    value={newPartSku}
+                    onChange={(e) => setNewPartSku(e.target.value)}
+                    className="w-full bg-black/40 border border-white/10 rounded-xl p-2.5 text-white font-mono uppercase"
+                  />
+                </div>
+                <div>
+                  <label className="block font-tech uppercase text-neutral-400 mb-1">Category</label>
+                  <select
+                    value={newPartCategory}
+                    onChange={(e) => setNewPartCategory(e.target.value as any)}
+                    className="w-full bg-black/40 border border-white/10 rounded-xl p-2.5 text-white font-tech uppercase"
+                  >
+                    <option value="fluids">Fluids & Lubricants</option>
+                    <option value="filters">Filters</option>
+                    <option value="brakes">Braking System</option>
+                    <option value="suspension">Suspension & Steering</option>
+                    <option value="electrical">Electrical & Batteries</option>
+                    <option value="engine">Engine Mechanical</option>
+                    <option value="tyres">Tyres & Wheels</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-tech uppercase text-neutral-400 mb-1">Part Full Description</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Motul 8100 X-cess Gen2 5W-40 Fully Synthetic Engine Oil"
+                  value={newPartName}
+                  onChange={(e) => setNewPartName(e.target.value)}
+                  className="w-full bg-black/40 border border-white/10 rounded-xl p-2.5 text-white"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-tech uppercase text-neutral-400 mb-1">Brand / OEM Manufacturer</label>
+                  <input
+                    type="text"
+                    value={newPartBrand}
+                    onChange={(e) => setNewPartBrand(e.target.value)}
+                    className="w-full bg-black/40 border border-white/10 rounded-xl p-2.5 text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block font-tech uppercase text-neutral-400 mb-1">Bin / Shelf Location</label>
+                  <input
+                    type="text"
+                    value={newPartLocation}
+                    onChange={(e) => setNewPartLocation(e.target.value)}
+                    className="w-full bg-black/40 border border-white/10 rounded-xl p-2.5 text-white font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div>
+                  <label className="block font-tech uppercase text-neutral-400 mb-1">Initial Qty</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={newPartStock}
+                    onChange={(e) => setNewPartStock(Number(e.target.value))}
+                    className="w-full bg-black/40 border border-white/10 rounded-xl p-2.5 text-white font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block font-tech uppercase text-neutral-400 mb-1">Min Threshold</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={newPartMin}
+                    onChange={(e) => setNewPartMin(Number(e.target.value))}
+                    className="w-full bg-black/40 border border-white/10 rounded-xl p-2.5 text-white font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block font-tech uppercase text-neutral-400 mb-1">Unit Cost (₹)</label>
+                  <input
+                    type="number"
+                    value={newPartCost}
+                    onChange={(e) => setNewPartCost(Number(e.target.value))}
+                    className="w-full bg-black/40 border border-white/10 rounded-xl p-2.5 text-white font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block font-tech uppercase text-neutral-400 mb-1">Sell Price (₹)</label>
+                  <input
+                    type="number"
+                    value={newPartPrice}
+                    onChange={(e) => setNewPartPrice(Number(e.target.value))}
+                    className="w-full bg-black/40 border border-white/10 rounded-xl p-2.5 text-white font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-white/10 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAddPartModal(false)}
+                  className="px-4 py-2 rounded-xl bg-white/5 text-neutral-300 font-tech uppercase"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-amber-500 text-black font-tech font-bold uppercase shadow"
+                >
+                  Add to Inventory
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ASSIGN CHAUFFEUR / DRIVER MODAL */}
+      {driverModalRequest && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#12161f] border border-white/15 rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl">
+            <div className="flex justify-between items-center border-b border-white/10 pb-3">
+              <div className="flex items-center gap-2">
+                <Truck className="w-5 h-5 text-amber-400" />
+                <h3 className="font-bold text-lg text-white">Assign Valet Chauffeur</h3>
+              </div>
+              <button onClick={() => setDriverModalRequest(null)} className="text-neutral-400 hover:text-white">
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleAssignDriverSubmit} className="space-y-4 text-xs">
+              <div className="p-3 rounded-xl bg-black/40 border border-white/10 space-y-1">
+                <span className="text-[10px] font-tech uppercase text-neutral-400">Customer & Destination</span>
+                <strong className="text-white block">{driverModalRequest.customerName}</strong>
+                <p className="text-neutral-400 text-[11px]">{driverModalRequest.pickupAddress}</p>
+                <span className="text-amber-400 font-mono text-[10px] block mt-1">
+                  Vehicle: {driverModalRequest.vehicleInfo} • Slot: {driverModalRequest.date} ({driverModalRequest.time})
+                </span>
+              </div>
+
+              <div>
+                <label className="block font-tech uppercase text-neutral-400 mb-1">Chauffeur / Driver Name</label>
+                <input
+                  type="text"
+                  required
+                  value={driverName}
+                  onChange={(e) => setDriverName(e.target.value)}
+                  className="w-full bg-black/40 border border-white/10 rounded-xl p-2.5 text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block font-tech uppercase text-neutral-400 mb-1">Driver Phone Number</label>
+                <input
+                  type="text"
+                  required
+                  value={driverPhone}
+                  onChange={(e) => setDriverPhone(e.target.value)}
+                  className="w-full bg-black/40 border border-white/10 rounded-xl p-2.5 text-white font-mono"
+                />
+              </div>
+
+              <div className="pt-3 border-t border-white/10 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setDriverModalRequest(null)}
+                  className="px-4 py-2 rounded-xl bg-white/5 text-neutral-300 font-tech uppercase"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-amber-500 text-black font-tech font-bold uppercase shadow"
+                >
+                  Confirm & Dispatch
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

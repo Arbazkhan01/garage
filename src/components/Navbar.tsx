@@ -126,18 +126,33 @@ export const Navbar: React.FC<NavbarProps> = ({ onBookClick }) => {
               );
             })}
 
-            <button
-              onClick={() => handleNavigation('/dashboard')}
-              className={`px-3 py-1.5 text-xs font-semibold tracking-wider rounded-full uppercase font-tech transition-colors ${
-                location.pathname.startsWith('/dashboard')
-                  ? 'bg-[#ff5500]/20 text-[#ff5500] font-bold border border-[#ff5500]/30'
-                  : 'text-neutral-300 hover:text-white'
-              }`}
-            >
-              My Garage
-            </button>
+            {currentUser?.role === 'customer' && (
+              <button
+                onClick={() => handleNavigation('/dashboard')}
+                className={`px-3 py-1.5 text-xs font-semibold tracking-wider rounded-full uppercase font-tech transition-colors ${
+                  location.pathname.startsWith('/dashboard')
+                    ? 'bg-[#ff5500]/20 text-[#ff5500] font-bold border border-[#ff5500]/30'
+                    : 'text-neutral-300 hover:text-white'
+                }`}
+              >
+                My Garage
+              </button>
+            )}
 
-            {currentUser.role === 'admin' && (
+            {currentUser?.role === 'technician' && (
+              <button
+                onClick={() => handleNavigation('/technician')}
+                className={`px-3 py-1.5 text-xs font-semibold tracking-wider rounded-full uppercase font-tech transition-colors ${
+                  location.pathname.startsWith('/technician')
+                    ? 'bg-cyan-500/20 text-cyan-400 font-bold border border-cyan-500/30'
+                    : 'text-cyan-400/80 hover:text-cyan-300'
+                }`}
+              >
+                Tech Bay
+              </button>
+            )}
+
+            {currentUser?.role === 'admin' && (
               <button
                 onClick={() => handleNavigation('/admin')}
                 className={`px-3 py-1.5 text-xs font-semibold tracking-wider rounded-full uppercase font-tech transition-colors ${
@@ -213,21 +228,35 @@ export const Navbar: React.FC<NavbarProps> = ({ onBookClick }) => {
                 </button>
               ))}
 
-              <button
-                onClick={() => handleNavigation('/dashboard')}
-                className="flex items-center justify-between py-2.5 px-3 rounded-lg text-sm font-tech uppercase tracking-wider text-[#ff5500] hover:bg-white/5 transition-colors text-left"
-              >
-                <span>My Customer Garage</span>
-                <ChevronRight className="w-4 h-4 text-[#ff5500]" />
-              </button>
+              {currentUser?.role === 'customer' && (
+                <button
+                  onClick={() => handleNavigation('/dashboard')}
+                  className="flex items-center justify-between py-2.5 px-3 rounded-lg text-sm font-tech uppercase tracking-wider text-[#ff5500] hover:bg-white/5 transition-colors text-left"
+                >
+                  <span>My Customer Garage</span>
+                  <ChevronRight className="w-4 h-4 text-[#ff5500]" />
+                </button>
+              )}
 
-              <button
-                onClick={() => handleNavigation('/admin')}
-                className="flex items-center justify-between py-2.5 px-3 rounded-lg text-sm font-tech uppercase tracking-wider text-amber-400 hover:bg-white/5 transition-colors text-left"
-              >
-                <span>Admin Operations</span>
-                <ChevronRight className="w-4 h-4 text-amber-400" />
-              </button>
+              {currentUser?.role === 'technician' && (
+                <button
+                  onClick={() => handleNavigation('/technician')}
+                  className="flex items-center justify-between py-2.5 px-3 rounded-lg text-sm font-tech uppercase tracking-wider text-cyan-400 hover:bg-white/5 transition-colors text-left"
+                >
+                  <span>Technician Workshop</span>
+                  <ChevronRight className="w-4 h-4 text-cyan-400" />
+                </button>
+              )}
+
+              {currentUser?.role === 'admin' && (
+                <button
+                  onClick={() => handleNavigation('/admin')}
+                  className="flex items-center justify-between py-2.5 px-3 rounded-lg text-sm font-tech uppercase tracking-wider text-amber-400 hover:bg-white/5 transition-colors text-left"
+                >
+                  <span>Admin Operations</span>
+                  <ChevronRight className="w-4 h-4 text-amber-400" />
+                </button>
+              )}
 
               <div className="pt-4 border-t border-white/10 flex flex-col gap-3">
                 <a

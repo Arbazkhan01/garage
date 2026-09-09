@@ -92,6 +92,12 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ initialServiceId, 
   const [couponInput, setCouponInput] = useState<string>('TORQX10');
   const [appliedCoupon, setAppliedCoupon] = useState<string>('TORQX10');
   const [couponError, setCouponError] = useState<string | null>(null);
+  const [bookingError, setBookingError] = useState<string | null>(null);
+
+  // Live bay capacity per slot for selected date
+  const slotAvailability = useMemo(() => {
+    return BookingService.getSlotAvailabilityForDate(selectedDate, TIME_SLOTS);
+  }, [selectedDate]);
 
   // Confirmed booking state
   const [createdBookingId, setCreatedBookingId] = useState<string | null>(null);
@@ -188,29 +194,34 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ initialServiceId, 
 
   // Submit Booking
   const handleConfirmBooking = () => {
-    const booking = BookingService.createBooking({
-      userId: currentUser.id,
-      customerName,
-      customerPhone,
-      customerEmail,
-      customerAddress: pickupAddress,
-      vehicleBrand: selectedBrand,
-      vehicleModel: selectedModel,
-      vehicleVariant: selectedVariant,
-      vehicleRegNumber: regNumber,
-      fuelType,
-      serviceId: selectedServiceId,
-      addonIds: selectedAddonIds,
-      serviceDate: selectedDate,
-      serviceTime: selectedTimeSlot,
-      pickupDrop,
-      pickupAddress: pickupDrop !== 'garage_drop' ? pickupAddress : undefined,
-      additionalNotes,
-      couponCode: appliedCoupon
-    });
+    try {
+      setBookingError(null);
+      const booking = BookingService.createBooking({
+        userId: currentUser.id,
+        customerName,
+        customerPhone,
+        customerEmail,
+        customerAddress: pickupAddress,
+        vehicleBrand: selectedBrand,
+        vehicleModel: selectedModel,
+        vehicleVariant: selectedVariant,
+        vehicleRegNumber: regNumber,
+        fuelType,
+        serviceId: selectedServiceId,
+        addonIds: selectedAddonIds,
+        serviceDate: selectedDate,
+        serviceTime: selectedTimeSlot,
+        pickupDrop,
+        pickupAddress: pickupDrop !== 'garage_drop' ? pickupAddress : undefined,
+        additionalNotes,
+        couponCode: appliedCoupon
+      });
 
-    setCreatedBookingId(booking.id);
-    setStep(7); // Success screen
+      setCreatedBookingId(booking.id);
+      setStep(7); // Success screen
+    } catch (err: any) {
+      setBookingError(err?.message || 'Failed to confirm booking due to workshop capacity.');
+    }
   };
 
   const handleDownloadICS = () => {
@@ -666,24 +677,47 @@ END:VCALENDAR`;
 
               {/* Time Slots */}
               <div>
-                <label className="block text-xs font-tech uppercase tracking-wider text-neutral-300 mb-2">
-                  Preferred Workshop Arrival Time
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-tech uppercase tracking-wider text-neutral-300">
+                    Preferred Workshop Arrival Time
+                  </label>
+                  <span className="text-[10px] font-mono text-neutral-400">
+                    Max 6 Service Bays / Slot
+                  </span>
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5">
-                  {TIME_SLOTS.map((slot) => (
-                    <button
-                      key={slot}
-                      type="button"
-                      onClick={() => setSelectedTimeSlot(slot)}
-                      className={`p-3 rounded-xl border text-xs font-tech uppercase tracking-wider transition-colors text-center ${
-                        selectedTimeSlot === slot
-                          ? 'bg-white/15 border-white/40 text-white font-bold'
-                          : 'bg-[#141922] border-white/5 text-neutral-400 hover:text-white'
-                      }`}
-                    >
-                      {slot}
-                    </button>
-                  ))}
+                  {TIME_SLOTS.map((slot) => {
+                    const avail = slotAvailability[slot] || { availableCount: 6, isFull: false };
+                    const isSelected = selectedTimeSlot === slot;
+                    return (
+                      <button
+                        key={slot}
+                        type="button"
+                        disabled={avail.isFull}
+                        onClick={() => setSelectedTimeSlot(slot)}
+                        className={`p-3 rounded-xl border text-xs font-tech tracking-wider transition-all text-center flex flex-col items-center justify-center gap-1 ${
+                          avail.isFull
+                            ? 'bg-red-950/20 border-red-500/20 text-neutral-500 cursor-not-allowed opacity-60'
+                            : isSelected
+                            ? 'bg-[#ff5500]/15 border-[#ff5500] text-white font-bold shadow-lg shadow-[#ff5500]/20 ring-1 ring-[#ff5500]/50'
+                            : 'bg-[#141922] border-white/5 text-neutral-400 hover:text-white hover:border-white/20'
+                        }`}
+                      >
+                        <span className="font-semibold text-xs tracking-wider uppercase">{slot}</span>
+                        <span
+                          className={`text-[9px] uppercase tracking-wider font-mono px-1.5 py-0.5 rounded ${
+                            avail.isFull
+                              ? 'bg-red-500/20 text-red-400 font-bold'
+                              : isSelected
+                              ? 'bg-[#ff5500]/20 text-[#ff5500]'
+                              : 'bg-white/5 text-neutral-400'
+                          }`}
+                        >
+                          {avail.isFull ? 'Bay Full' : `${avail.availableCount} Bay${avail.availableCount === 1 ? '' : 's'} Open`}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -1058,6 +1092,13 @@ END:VCALENDAR`;
                         <span>
                           Starting estimate. Final price may vary after vehicle physical inspection.
                         </span>
+                      </div>
+                    )}
+
+                    {bookingError && (
+                      <div className="p-3 rounded-lg bg-red-500/15 border border-red-500/30 text-xs text-red-300 mb-3 flex items-start gap-2">
+                        <AlertCircle className="w-4 h-4 shrink-0 text-red-400 mt-0.5" />
+                        <span>{bookingError}</span>
                       </div>
                     )}
 

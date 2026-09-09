@@ -10,20 +10,33 @@ import {
 import { INITIAL_TECHNICIANS, INITIAL_SERVICE_BAYS } from '../data/technicianData';
 import { INITIAL_COUPONS } from '../data/pricingData';
 import { TESTIMONIALS_DATA } from '../data/automotiveData';
+import { INITIAL_INVENTORY_PARTS } from '../data/inventoryData';
+import { INITIAL_JOB_CARDS } from '../data/jobCardData';
+import { INITIAL_PICKUP_DROP_REQUESTS } from '../data/pickupDropData';
+import { INITIAL_AUDIT_LOGS } from '../data/auditLogData';
+import { INITIAL_SERVICE_PACKAGES } from '../data/packageData';
 import { ReviewItem } from '../types';
 
 export const STORAGE_KEYS = {
   CURRENT_USER: 'torqx_current_user',
   USERS: 'torqx_users',
+  SESSIONS: 'torqx_sessions',
   VEHICLES: 'torqx_vehicles',
   BOOKINGS: 'torqx_bookings',
+  JOB_CARDS: 'torqx_job_cards',
   INSPECTIONS: 'torqx_inspections',
-  QUOTATIONS: 'torqx_quotations',
+  QUOTATIONS: 'torqx_quotes',
   INVOICES: 'torqx_invoices',
+  PAYMENTS: 'torqx_payments',
   TECHNICIANS: 'torqx_technicians',
   BAYS: 'torqx_bays',
+  INVENTORY: 'torqx_inventory',
+  PICKUP_DROP: 'torqx_pickup_drop',
   COUPONS: 'torqx_coupons',
   NOTIFICATIONS: 'torqx_notifications',
+  AUDIT_LOGS: 'torqx_audit_logs',
+  PACKAGES: 'torqx_packages',
+  PRICING: 'torqx_pricing',
   REVIEWS: 'torqx_reviews',
   SETTINGS: 'torqx_settings'
 };
@@ -39,7 +52,7 @@ export class StorageService {
       localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(DEMO_CUSTOMERS));
     }
     if (!localStorage.getItem(STORAGE_KEYS.CURRENT_USER)) {
-      // Default to Vikram Malhotra (customer)
+      // Default to Vikram Mehta (customer)
       localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(DEMO_CUSTOMERS[0]));
     }
     if (!localStorage.getItem(STORAGE_KEYS.VEHICLES)) {
@@ -47,6 +60,21 @@ export class StorageService {
     }
     if (!localStorage.getItem(STORAGE_KEYS.BOOKINGS)) {
       localStorage.setItem(STORAGE_KEYS.BOOKINGS, JSON.stringify(DEMO_BOOKINGS));
+    }
+    if (!localStorage.getItem(STORAGE_KEYS.JOB_CARDS)) {
+      localStorage.setItem(STORAGE_KEYS.JOB_CARDS, JSON.stringify(INITIAL_JOB_CARDS));
+    }
+    if (!localStorage.getItem(STORAGE_KEYS.INVENTORY)) {
+      localStorage.setItem(STORAGE_KEYS.INVENTORY, JSON.stringify(INITIAL_INVENTORY_PARTS));
+    }
+    if (!localStorage.getItem(STORAGE_KEYS.PICKUP_DROP)) {
+      localStorage.setItem(STORAGE_KEYS.PICKUP_DROP, JSON.stringify(INITIAL_PICKUP_DROP_REQUESTS));
+    }
+    if (!localStorage.getItem(STORAGE_KEYS.AUDIT_LOGS)) {
+      localStorage.setItem(STORAGE_KEYS.AUDIT_LOGS, JSON.stringify(INITIAL_AUDIT_LOGS));
+    }
+    if (!localStorage.getItem(STORAGE_KEYS.PACKAGES)) {
+      localStorage.setItem(STORAGE_KEYS.PACKAGES, JSON.stringify(INITIAL_SERVICE_PACKAGES));
     }
     if (!localStorage.getItem(STORAGE_KEYS.INSPECTIONS)) {
       localStorage.setItem(STORAGE_KEYS.INSPECTIONS, JSON.stringify(DEMO_INSPECTIONS));

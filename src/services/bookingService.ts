@@ -1,4 +1,4 @@
-import { Booking, ServiceStatus, InspectionReport, Quotation } from '../types';
+import { Booking, ServiceStatus, InspectionReport, Quotation, ServiceBay } from '../types';
 import { StorageService, STORAGE_KEYS } from './storageService';
 import { COMPREHENSIVE_SERVICES } from '../data/pricingData';
 import { PricingService } from './pricingService';
@@ -16,6 +16,57 @@ export class BookingService {
   public static getBookingById(id: string): Booking | undefined {
     const all = this.getAllBookings();
     return all.find((b) => b.id.toLowerCase() === id.toLowerCase());
+  }
+
+  /**
+   * Capacity & Bay Management to prevent overbooking
+   */
+  public static getBayCapacity(date: string, timeSlot: string): {
+    totalBays: number;
+    bookedCount: number;
+    availableCount: number;
+    isFull: boolean;
+    availableBayNames: string[];
+  } {
+    const bays = StorageService.get<ServiceBay[]>(STORAGE_KEYS.BAYS, []);
+    const totalBays = bays.length > 0 ? bays.length : 6;
+    const allBookings = this.getAllBookings();
+
+    // Active bookings occupying bays for this date & slot
+    const slotBookings = allBookings.filter(
+      (b) =>
+        b.serviceDate === date &&
+        b.serviceTime === timeSlot &&
+        b.status !== 'completed' &&
+        b.status !== 'cancelled'
+    );
+
+    const bookedBayNames = new Set(slotBookings.map((b) => b.bayNumber).filter(Boolean));
+    const allBayNames = bays.length > 0 ? bays.map((b) => b.name) : ['Bay 01', 'Bay 02', 'Bay 03', 'Bay 04', 'Bay 05', 'Bay 06'];
+    const availableBayNames = allBayNames.filter((name) => !bookedBayNames.has(name));
+
+    const bookedCount = slotBookings.length;
+    const availableCount = Math.max(0, totalBays - bookedCount);
+
+    return {
+      totalBays,
+      bookedCount,
+      availableCount,
+      isFull: availableCount === 0,
+      availableBayNames
+    };
+  }
+
+  public static getSlotAvailabilityForDate(date: string, timeSlots: string[]): Record<string, { availableCount: number; isFull: boolean }> {
+    const result: Record<string, { availableCount: number; isFull: boolean }> = {};
+    for (const slot of timeSlots) {
+      const cap = this.getBayCapacity(date, slot);
+      result[slot] = {
+        availableCount: cap.availableCount,
+        isFull: cap.isFull
+      };
+    }
+    return result;
   }
 
   public static createBooking(params: {
@@ -39,6 +90,14 @@ export class BookingService {
     couponCode?: string;
   }): Booking {
     const all = this.getAllBookings();
+
+    // Enforce Bay Capacity Check to prevent overbooking
+    const capacity = this.getBayCapacity(params.serviceDate, params.serviceTime);
+    if (capacity.isFull) {
+      throw new Error(`Workshop bay capacity reached for ${params.serviceDate} at ${params.serviceTime}. Please select another time slot.`);
+    }
+
+    const assignedBay = capacity.availableBayNames[0] || 'Bay 01';
 
     // Generate unique ID
     const randomNum = Math.floor(100 + Math.random() * 900);
@@ -78,7 +137,7 @@ export class BookingService {
       additionalNotes: params.additionalNotes,
       status: 'booking_confirmed',
       technicianId: 'tech-1', // Default lead
-      bayNumber: 'Bay 01',
+      bayNumber: assignedBay,
       priceBreakdown,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),

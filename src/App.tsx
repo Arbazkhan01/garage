@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-import { RoleSwitcherBar } from './components/RoleSwitcherBar';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { DevelopmentRoleSwitcher } from './components/DevelopmentRoleSwitcher';
+import { ProtectedRoute, RoleProtectedRoute } from './components/ProtectedRoute';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
 import { StatsStrip } from './components/StatsStrip';
@@ -24,6 +25,7 @@ import { BookingWizard } from './components/BookingWizard';
 import { ServiceTracker } from './components/ServiceTracker';
 import { CustomerDashboard } from './components/CustomerDashboard';
 import { AdminDashboard } from './components/AdminDashboard';
+import { TechnicianDashboard } from './components/TechnicianDashboard';
 import { ServicesPage } from './components/ServicesPage';
 import { AboutPage } from './components/AboutPage';
 import { ContactPage } from './components/ContactPage';
@@ -144,9 +146,9 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-[#0a0c10] text-[#f1f3f7] flex flex-col selection:bg-[#ff5500] selection:text-white pt-[36px]">
-        {/* Top Interactive Role Switcher Bar for Prototype Testing */}
-        <RoleSwitcherBar />
+      <div className="min-h-screen bg-[#0a0c10] text-[#f1f3f7] flex flex-col selection:bg-[#ff5500] selection:text-white">
+        {/* Development-only Floating Role Switcher Emulator */}
+        <DevelopmentRoleSwitcher />
 
         {/* Top Sticky Transparent/Blurred Navbar */}
         <Navbar onBookClick={() => scrollToSection('booking')} />
@@ -166,8 +168,33 @@ export default function App() {
             />
             <Route path="/book-service" element={<StandaloneBookingPage />} />
             <Route path="/service/:bookingId" element={<ServiceTracker />} />
-            <Route path="/dashboard/*" element={<CustomerDashboard />} />
-            <Route path="/admin/*" element={<AdminDashboard />} />
+            
+            {/* RBAC Protected Portals */}
+            <Route
+              path="/dashboard/*"
+              element={
+                <RoleProtectedRoute allowedRole="customer">
+                  <CustomerDashboard />
+                </RoleProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/*"
+              element={
+                <RoleProtectedRoute allowedRole="admin">
+                  <AdminDashboard />
+                </RoleProtectedRoute>
+              }
+            />
+            <Route
+              path="/technician/*"
+              element={
+                <RoleProtectedRoute allowedRole="technician">
+                  <TechnicianDashboard />
+                </RoleProtectedRoute>
+              }
+            />
+
             <Route path="/services" element={<ServicesPage />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/contact" element={<ContactPage />} />

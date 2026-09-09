@@ -52,4 +52,14 @@ export class NotificationService {
     StorageService.set(STORAGE_KEYS.NOTIFICATIONS, all);
     return newNotif;
   }
+
+  public static notifyUser(
+    userId: string,
+    title: string,
+    message: string,
+    type: 'info' | 'success' | 'warning' | 'reminder' = 'info',
+    link?: string
+  ): NotificationItem {
+    return this.sendNotification({ userId, title, message, type, link });
+  }
 }

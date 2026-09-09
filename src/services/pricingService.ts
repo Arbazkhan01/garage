@@ -187,4 +187,58 @@ export class PricingService {
   public static formatCurrency(val: number): string {
     return `₹${Math.round(val).toLocaleString('en-IN')}`;
   }
+
+  /**
+   * Service Package Management
+   */
+  public static getAllPackages() {
+    return StorageService.get(STORAGE_KEYS.PACKAGES, []);
+  }
+
+  public static getAllCoupons(): Coupon[] {
+    return StorageService.get<Coupon[]>(STORAGE_KEYS.COUPONS, []);
+  }
+
+  public static validateCoupon(code: string, subtotal: number): {
+    valid: boolean;
+    discountAmount: number;
+    message: string;
+    coupon?: Coupon;
+  } {
+    if (!code || !code.trim()) {
+      return { valid: false, discountAmount: 0, message: 'Please enter a coupon code.' };
+    }
+
+    const coupons = this.getAllCoupons();
+    const found = coupons.find(
+      (c) => c.code.toUpperCase() === code.trim().toUpperCase() && c.active
+    );
+
+    if (!found) {
+      return { valid: false, discountAmount: 0, message: 'Invalid or expired coupon code.' };
+    }
+
+    if (subtotal < found.minOrder) {
+      return {
+        valid: false,
+        discountAmount: 0,
+        message: `Minimum order of ₹${found.minOrder.toLocaleString('en-IN')} required for ${found.code}.`
+      };
+    }
+
+    let discountAmount = 0;
+    if (found.discountType === 'percentage') {
+      const raw = (subtotal * found.value) / 100;
+      discountAmount = found.maxDiscount ? Math.min(raw, found.maxDiscount) : raw;
+    } else {
+      discountAmount = found.value;
+    }
+
+    return {
+      valid: true,
+      discountAmount: Math.round(discountAmount),
+      message: `Coupon ${found.code} applied! Saved ₹${Math.round(discountAmount).toLocaleString('en-IN')}`,
+      coupon: found
+    };
+  }
 }
