@@ -1,82 +1,82 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { Phone, Menu, X, ShieldCheck, ChevronRight, Gauge } from 'lucide-react';
+import { Phone, Menu, X, ShieldCheck, ChevronRight, Gauge, Activity, User, Shield, Wrench } from 'lucide-react';
 import { BRAND_INFO } from '../data/automotiveData';
+import { AuthService } from '../services/authService';
 
 interface NavbarProps {
-  onBookClick: () => void;
+  onBookClick?: () => void;
 }
 
-const NAV_LINKS = [
-  { label: 'Home', href: '#hero' },
-  { label: 'Services', href: '#services' },
-  { label: 'About', href: '#about' },
-  { label: 'Why Us', href: '#why-us' },
-  { label: 'Process', href: '#process' },
-  { label: 'Our Work', href: '#our-work' },
-  { label: 'Reviews', href: '#reviews' },
-  { label: 'Contact', href: '#contact' },
-];
-
 export const Navbar: React.FC<NavbarProps> = ({ onBookClick }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState('hero');
+  const [currentUser, setCurrentUser] = useState(AuthService.getCurrentUser());
 
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
-
-      // Scrollspy logic
-      const sections = NAV_LINKS.map(link => link.href.substring(1));
-      const scrollPosition = window.scrollY + 120;
-
-      for (let i = sections.length - 1; i >= 0; i--) {
-        const sectionEl = document.getElementById(sections[i]);
-        if (sectionEl) {
-          const top = sectionEl.offsetTop;
-          if (scrollPosition >= top) {
-            setActiveSection(sections[i]);
-            break;
-          }
-        }
-      }
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
-    e.preventDefault();
+  useEffect(() => {
+    const unsub = AuthService.subscribe((u) => setCurrentUser(u));
+    return unsub;
+  }, []);
+
+  const handleNavigation = (pathOrHash: string) => {
     setMobileMenuOpen(false);
-    const target = document.querySelector(href);
-    if (target) {
-      const navOffset = 80;
-      const elementPosition = target.getBoundingClientRect().top;
-      const offsetPosition = elementPosition + window.pageYOffset - navOffset;
-      window.scrollTo({
-        top: offsetPosition,
-        behavior: 'smooth'
-      });
+    if (pathOrHash.startsWith('#')) {
+      if (location.pathname !== '/') {
+        navigate('/' + pathOrHash);
+        setTimeout(() => {
+          const el = document.querySelector(pathOrHash);
+          if (el) el.scrollIntoView({ behavior: 'smooth' });
+        }, 150);
+      } else {
+        const el = document.querySelector(pathOrHash);
+        if (el) {
+          const navOffset = 80;
+          const elementPosition = el.getBoundingClientRect().top;
+          const offsetPosition = elementPosition + window.pageYOffset - navOffset;
+          window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
+        }
+      }
+    } else {
+      navigate(pathOrHash);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
+
+  const navLinks = [
+    { label: 'Home', target: '#hero' },
+    { label: 'Services', target: '/services' },
+    { label: 'Live Tracker', target: '/service/TORQX-2026-00482' },
+    { label: 'About', target: '/about' },
+    { label: 'Reviews', target: '#reviews' },
+    { label: 'Contact', target: '/contact' },
+  ];
 
   return (
     <>
       <header
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
           isScrolled
-            ? 'bg-[#090b0f]/90 backdrop-blur-md border-b border-white/10 shadow-2xl shadow-black/60 py-3.5'
-            : 'bg-gradient-to-b from-[#090b0f]/90 via-[#090b0f]/40 to-transparent py-5'
+            ? 'bg-[#090b0f]/95 backdrop-blur-md border-b border-white/10 shadow-2xl shadow-black/60 py-3'
+            : 'bg-gradient-to-b from-[#090b0f]/95 via-[#090b0f]/60 to-transparent py-4'
         }`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
           {/* Logo */}
-          <a
-            href="#hero"
-            onClick={(e) => handleNavClick(e, '#hero')}
-            className="flex items-center gap-3 group focus:outline-none"
+          <button
+            onClick={() => handleNavigation('/')}
+            className="flex items-center gap-3 group focus:outline-none text-left"
             id="brand-logo"
           >
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#1c222c] to-[#0c0e13] border border-white/10 flex items-center justify-center relative overflow-hidden group-hover:border-[#ff5500]/60 transition-colors shadow-lg shadow-black/40">
@@ -96,21 +96,22 @@ export const Navbar: React.FC<NavbarProps> = ({ onBookClick }) => {
                 AUTOCARE • PUNE
               </span>
             </div>
-          </a>
+          </button>
 
           {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center gap-1 bg-[#12161f]/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/8 shadow-inner">
-            {NAV_LINKS.map((link) => {
-              const isActive = activeSection === link.href.substring(1);
+          <nav className="hidden lg:flex items-center gap-1 bg-[#12161f]/80 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 shadow-inner">
+            {navLinks.map((link) => {
+              const isActive =
+                link.target.startsWith('#')
+                  ? location.pathname === '/' && location.hash === link.target
+                  : location.pathname === link.target;
+
               return (
-                <a
-                  key={link.href}
-                  href={link.href}
-                  onClick={(e) => handleNavClick(e, link.href)}
+                <button
+                  key={link.label}
+                  onClick={() => handleNavigation(link.target)}
                   className={`relative px-3.5 py-1.5 text-xs font-semibold tracking-wider transition-colors rounded-full uppercase font-tech ${
-                    isActive
-                      ? 'text-white'
-                      : 'text-neutral-400 hover:text-white'
+                    isActive ? 'text-white' : 'text-neutral-400 hover:text-white'
                   }`}
                 >
                   {isActive && (
@@ -121,13 +122,37 @@ export const Navbar: React.FC<NavbarProps> = ({ onBookClick }) => {
                     />
                   )}
                   <span className="relative z-10">{link.label}</span>
-                </a>
+                </button>
               );
             })}
+
+            <button
+              onClick={() => handleNavigation('/dashboard')}
+              className={`px-3 py-1.5 text-xs font-semibold tracking-wider rounded-full uppercase font-tech transition-colors ${
+                location.pathname.startsWith('/dashboard')
+                  ? 'bg-[#ff5500]/20 text-[#ff5500] font-bold border border-[#ff5500]/30'
+                  : 'text-neutral-300 hover:text-white'
+              }`}
+            >
+              My Garage
+            </button>
+
+            {currentUser.role === 'admin' && (
+              <button
+                onClick={() => handleNavigation('/admin')}
+                className={`px-3 py-1.5 text-xs font-semibold tracking-wider rounded-full uppercase font-tech transition-colors ${
+                  location.pathname === '/admin'
+                    ? 'bg-amber-500/20 text-amber-400 font-bold border border-amber-500/30'
+                    : 'text-amber-400/80 hover:text-amber-300'
+                }`}
+              >
+                Admin Bay
+              </button>
+            )}
           </nav>
 
           {/* Right CTA */}
-          <div className="hidden sm:flex items-center gap-4">
+          <div className="hidden sm:flex items-center gap-3">
             <a
               href={`tel:${BRAND_INFO.phoneRaw}`}
               className="hidden xl:flex items-center gap-2 text-xs font-tech text-neutral-300 hover:text-white transition-colors py-1.5 px-3 rounded-lg border border-white/5 bg-white/5"
@@ -136,29 +161,32 @@ export const Navbar: React.FC<NavbarProps> = ({ onBookClick }) => {
               <span>{BRAND_INFO.phoneDisplay}</span>
             </a>
 
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={onBookClick}
-              className="relative group overflow-hidden px-5 py-2.5 rounded-lg font-tech font-bold text-xs uppercase tracking-wider text-white bg-[#ff5500] hover:bg-[#ff6a1a] transition-all duration-200 shadow-lg shadow-[#ff5500]/25 hover:shadow-[#ff5500]/40 flex items-center gap-2"
+            <button
+              onClick={() => {
+                if (onBookClick && location.pathname === '/') {
+                  onBookClick();
+                } else {
+                  navigate('/book-service');
+                }
+              }}
+              className="relative group overflow-hidden px-4 sm:px-5 py-2.5 rounded-xl font-tech font-bold text-xs uppercase tracking-wider text-white bg-[#ff5500] hover:bg-[#ff6a1a] transition-all duration-200 shadow-lg shadow-[#ff5500]/25 hover:shadow-[#ff5500]/40 flex items-center gap-2"
               id="nav-book-service-btn"
             >
               <span>Book a Service</span>
               <ChevronRight className="w-4 h-4 transform group-hover:translate-x-0.5 transition-transform" />
-            </motion.button>
+            </button>
           </div>
 
           {/* Mobile menu button */}
           <div className="flex items-center gap-2 lg:hidden">
-            <motion.button
-              whileTap={{ scale: 0.95 }}
+            <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="p-2.5 rounded-lg bg-[#141820] text-neutral-200 hover:text-white border border-white/10"
               aria-label="Toggle navigation menu"
               id="mobile-menu-toggle-btn"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </motion.button>
+            </button>
           </div>
         </div>
       </header>
@@ -171,20 +199,35 @@ export const Navbar: React.FC<NavbarProps> = ({ onBookClick }) => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.25 }}
-            className="fixed inset-x-0 top-[68px] z-40 bg-[#090b0f]/98 backdrop-blur-xl border-b border-white/10 p-6 lg:hidden shadow-2xl"
+            className="fixed inset-x-0 top-[65px] z-40 bg-[#090b0f]/98 backdrop-blur-xl border-b border-white/10 p-6 lg:hidden shadow-2xl max-h-[calc(100vh-80px)] overflow-y-auto"
           >
-            <div className="flex flex-col space-y-3">
-              {NAV_LINKS.map((link) => (
-                <a
-                  key={link.href}
-                  href={link.href}
-                  onClick={(e) => handleNavClick(e, link.href)}
-                  className="flex items-center justify-between py-2.5 px-3 rounded-lg text-sm font-tech uppercase tracking-wider text-neutral-300 hover:text-white hover:bg-white/5 transition-colors"
+            <div className="flex flex-col space-y-2.5">
+              {navLinks.map((link) => (
+                <button
+                  key={link.label}
+                  onClick={() => handleNavigation(link.target)}
+                  className="flex items-center justify-between py-2.5 px-3 rounded-lg text-sm font-tech uppercase tracking-wider text-neutral-300 hover:text-white hover:bg-white/5 transition-colors text-left"
                 >
                   <span>{link.label}</span>
                   <ChevronRight className="w-4 h-4 text-neutral-500" />
-                </a>
+                </button>
               ))}
+
+              <button
+                onClick={() => handleNavigation('/dashboard')}
+                className="flex items-center justify-between py-2.5 px-3 rounded-lg text-sm font-tech uppercase tracking-wider text-[#ff5500] hover:bg-white/5 transition-colors text-left"
+              >
+                <span>My Customer Garage</span>
+                <ChevronRight className="w-4 h-4 text-[#ff5500]" />
+              </button>
+
+              <button
+                onClick={() => handleNavigation('/admin')}
+                className="flex items-center justify-between py-2.5 px-3 rounded-lg text-sm font-tech uppercase tracking-wider text-amber-400 hover:bg-white/5 transition-colors text-left"
+              >
+                <span>Admin Operations</span>
+                <ChevronRight className="w-4 h-4 text-amber-400" />
+              </button>
 
               <div className="pt-4 border-t border-white/10 flex flex-col gap-3">
                 <a
@@ -198,7 +241,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onBookClick }) => {
                 <button
                   onClick={() => {
                     setMobileMenuOpen(false);
-                    onBookClick();
+                    navigate('/book-service');
                   }}
                   className="w-full py-3.5 px-4 rounded-lg bg-[#ff5500] text-white font-tech font-bold text-xs uppercase tracking-wider shadow-lg shadow-[#ff5500]/30 flex items-center justify-center gap-2"
                 >

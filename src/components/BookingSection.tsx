@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Calendar, 
@@ -13,10 +14,13 @@ import {
   AlertCircle, 
   Sparkles,
   ArrowRight,
-  ExternalLink
+  ExternalLink,
+  Layers
 } from 'lucide-react';
 import { POPULAR_VEHICLE_BRANDS, SERVICES_DATA, BRAND_INFO } from '../data/automotiveData';
 import { BookingFormData } from '../types';
+import { BookingService } from '../services/bookingService';
+import { BookingWizard } from './BookingWizard';
 
 interface BookingSectionProps {
   preselectedService?: string;
@@ -27,6 +31,8 @@ export const BookingSection: React.FC<BookingSectionProps> = ({
   preselectedService,
   onBookingSuccess 
 }) => {
+  const navigate = useNavigate();
+  const [bookingMode, setBookingMode] = useState<'quick' | 'wizard'>('quick');
   const [formData, setFormData] = useState<BookingFormData>({
     fullName: '',
     phone: '',
@@ -82,12 +88,22 @@ export const BookingSection: React.FC<BookingSectionProps> = ({
 
     setTimeout(() => {
       setIsSubmitting(false);
-      const generatedId = `TRX-${Math.floor(100000 + Math.random() * 900000)}`;
+      const created = BookingService.createBooking({
+        customerName: formData.fullName,
+        customerPhone: formData.phone,
+        vehicleBrand: formData.vehicleBrand,
+        vehicleModel: formData.vehicleModel,
+        serviceId: 'periodic-service',
+        serviceDate: formData.preferredDate,
+        serviceTime: formData.preferredTime,
+        pickupDrop: 'garage_drop',
+        additionalNotes: formData.additionalNotes
+      });
       setConfirmedBooking({
-        id: generatedId,
+        id: created.id,
         data: { ...formData }
       });
-      onBookingSuccess(generatedId);
+      onBookingSuccess(created.id);
     }, 900);
   };
 
@@ -184,6 +200,14 @@ export const BookingSection: React.FC<BookingSectionProps> = ({
 
                     {/* Action buttons */}
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                      <button
+                        onClick={() => navigate(`/service/${confirmedBooking.id}`)}
+                        className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-[#ff5500] hover:bg-[#ff6a1a] text-white font-tech font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-[#ff5500]/30 transition-all"
+                      >
+                        <Car className="w-4 h-4" />
+                        <span>Track Live Service Status</span>
+                      </button>
+
                       <a
                         href={`https://wa.me/${BRAND_INFO.whatsappNumber}?text=Hello%20TORQX%2C%20I%20just%20booked%20service%20token%20${confirmedBooking.id}%20for%20my%20${encodeURIComponent(confirmedBooking.data.vehicleBrand + ' ' + confirmedBooking.data.vehicleModel)}.`}
                         target="_blank"
@@ -216,7 +240,42 @@ export const BookingSection: React.FC<BookingSectionProps> = ({
                   </motion.div>
                 ) : (
                   /* Form State */
-                  <form onSubmit={handleSubmit} className="space-y-6">
+                  <div>
+                    {/* Booking Mode Switcher */}
+                    <div className="flex items-center justify-between gap-3 mb-6 pb-4 border-b border-white/10">
+                      <span className="text-xs font-tech uppercase tracking-wider text-neutral-400">
+                        Booking Experience:
+                      </span>
+                      <div className="flex items-center gap-1 bg-black/40 p-1 rounded-xl border border-white/10">
+                        <button
+                          type="button"
+                          onClick={() => setBookingMode('quick')}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-tech uppercase tracking-wider transition-colors ${
+                            bookingMode === 'quick'
+                              ? 'bg-[#ff5500] text-white font-bold'
+                              : 'text-neutral-400 hover:text-white'
+                          }`}
+                        >
+                          ⚡ Quick Schedule Form
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setBookingMode('wizard')}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-tech uppercase tracking-wider transition-colors ${
+                            bookingMode === 'wizard'
+                              ? 'bg-[#ff5500] text-white font-bold'
+                              : 'text-neutral-400 hover:text-white'
+                          }`}
+                        >
+                          🎯 6-Step Dynamic Cost Engine
+                        </button>
+                      </div>
+                    </div>
+
+                    {bookingMode === 'wizard' ? (
+                      <BookingWizard />
+                    ) : (
+                      <form onSubmit={handleSubmit} className="space-y-6">
                     
                     {/* Customer Info row */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -426,7 +485,9 @@ export const BookingSection: React.FC<BookingSectionProps> = ({
                     </p>
                   </form>
                 )}
-              </AnimatePresence>
+              </div>
+            )}
+          </AnimatePresence>
 
             </div>
           </div>

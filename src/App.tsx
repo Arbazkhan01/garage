@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { RoleSwitcherBar } from './components/RoleSwitcherBar';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
 import { StatsStrip } from './components/StatsStrip';
@@ -16,6 +18,95 @@ import { Footer } from './components/Footer';
 import { FloatingCTAs } from './components/FloatingCTAs';
 import { LegalModal } from './components/LegalModal';
 import { Toast } from './components/Toast';
+
+// Full platform components
+import { BookingWizard } from './components/BookingWizard';
+import { ServiceTracker } from './components/ServiceTracker';
+import { CustomerDashboard } from './components/CustomerDashboard';
+import { AdminDashboard } from './components/AdminDashboard';
+import { ServicesPage } from './components/ServicesPage';
+import { AboutPage } from './components/AboutPage';
+import { ContactPage } from './components/ContactPage';
+import { LoginPage } from './components/LoginPage';
+
+// Home Page Component preserving exact marketing layout
+function HomePage({
+  selectedService,
+  onSelectService,
+  onBookingSuccess,
+  scrollToSection,
+}: {
+  selectedService: string;
+  onSelectService: (serviceName: string) => void;
+  onBookingSuccess: (bookingId: string) => void;
+  scrollToSection: (sectionId: string) => void;
+}) {
+  return (
+    <main className="flex-1">
+      {/* Cinematic Hero */}
+      <Hero
+        onBookClick={() => scrollToSection('booking')}
+        onExploreServices={() => scrollToSection('services')}
+      />
+
+      {/* Animated Numbers / Stats Strip */}
+      <StatsStrip />
+
+      {/* Services Section */}
+      <ServicesSection onSelectService={onSelectService} />
+
+      {/* About Garage / Split-Screen Tech Facility */}
+      <AboutSection />
+
+      {/* Why Choose Us */}
+      <WhyChooseUs />
+
+      {/* Process Timeline */}
+      <ProcessTimeline />
+
+      {/* Before & After Interactive Draggable Slider */}
+      <BeforeAfterSlider />
+
+      {/* Our Work / Masonry Garage Gallery */}
+      <GallerySection />
+
+      {/* Testimonials Carousel */}
+      <TestimonialsSection />
+
+      {/* Special Offer Promotional Callout */}
+      <SpecialOffer onBookClick={() => scrollToSection('booking')} />
+
+      {/* Interactive Service Booking Form */}
+      <BookingSection
+        preselectedService={selectedService}
+        onBookingSuccess={onBookingSuccess}
+      />
+
+      {/* Contact & Location Section */}
+      <ContactSection />
+    </main>
+  );
+}
+
+// Standalone Booking Page wrapper
+function StandaloneBookingPage() {
+  return (
+    <div className="pt-8 pb-16">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 mb-6 text-center">
+        <span className="text-xs font-tech font-bold uppercase tracking-widest text-[#ff5500] px-3 py-1 rounded bg-[#ff5500]/10 border border-[#ff5500]/25">
+          TORQX Precision Booking Engine
+        </span>
+        <h1 className="text-3xl sm:text-4xl font-display font-extrabold text-white mt-2">
+          Configure Your Automotive Service
+        </h1>
+        <p className="text-xs sm:text-sm text-neutral-400 mt-1">
+          Dynamic itemized quotes, genuine OEM add-on packages, and verified technician allocation.
+        </p>
+      </div>
+      <BookingWizard />
+    </div>
+  );
+}
 
 export default function App() {
   const [selectedService, setSelectedService] = useState<string>('Periodic Service');
@@ -52,75 +143,60 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0c10] text-[#f1f3f7] flex flex-col selection:bg-[#ff5500] selection:text-white">
-      {/* Top Sticky Transparent/Blurred Navbar */}
-      <Navbar onBookClick={() => scrollToSection('booking')} />
+    <BrowserRouter>
+      <div className="min-h-screen bg-[#0a0c10] text-[#f1f3f7] flex flex-col selection:bg-[#ff5500] selection:text-white pt-[36px]">
+        {/* Top Interactive Role Switcher Bar for Prototype Testing */}
+        <RoleSwitcherBar />
 
-      {/* Main Content Sections */}
-      <main className="flex-1">
-        {/* Cinematic Hero */}
-        <Hero
-          onBookClick={() => scrollToSection('booking')}
-          onExploreServices={() => scrollToSection('services')}
+        {/* Top Sticky Transparent/Blurred Navbar */}
+        <Navbar onBookClick={() => scrollToSection('booking')} />
+
+        <div className="flex-1 pt-14">
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <HomePage
+                  selectedService={selectedService}
+                  onSelectService={handleSelectServiceFromCard}
+                  onBookingSuccess={handleBookingSuccess}
+                  scrollToSection={scrollToSection}
+                />
+              }
+            />
+            <Route path="/book-service" element={<StandaloneBookingPage />} />
+            <Route path="/service/:bookingId" element={<ServiceTracker />} />
+            <Route path="/dashboard/*" element={<CustomerDashboard />} />
+            <Route path="/admin/*" element={<AdminDashboard />} />
+            <Route path="/services" element={<ServicesPage />} />
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/contact" element={<ContactPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </div>
+
+        {/* Premium Dark Footer */}
+        <Footer
+          onOpenLegal={(type) => setLegalModalType(type)}
+          onSelectService={handleSelectServiceFromCard}
         />
 
-        {/* Animated Numbers / Stats Strip */}
-        <StatsStrip />
+        {/* Floating Action Buttons (WhatsApp, Scroll-To-Top, Mobile Bar) */}
+        <FloatingCTAs onBookClick={() => scrollToSection('booking')} />
 
-        {/* Services Section */}
-        <ServicesSection onSelectService={handleSelectServiceFromCard} />
-
-        {/* About Garage / Split-Screen Tech Facility */}
-        <AboutSection />
-
-        {/* Why Choose Us */}
-        <WhyChooseUs />
-
-        {/* Process Timeline */}
-        <ProcessTimeline />
-
-        {/* Before & After Interactive Draggable Slider */}
-        <BeforeAfterSlider />
-
-        {/* Our Work / Masonry Garage Gallery */}
-        <GallerySection />
-
-        {/* Testimonials Carousel */}
-        <TestimonialsSection />
-
-        {/* Special Offer Promotional Callout */}
-        <SpecialOffer onBookClick={() => scrollToSection('booking')} />
-
-        {/* Interactive Service Booking Form */}
-        <BookingSection
-          preselectedService={selectedService}
-          onBookingSuccess={handleBookingSuccess}
+        {/* Legal Information Modal */}
+        <LegalModal
+          type={legalModalType}
+          onClose={() => setLegalModalType(null)}
         />
 
-        {/* Contact & Location Section */}
-        <ContactSection />
-      </main>
-
-      {/* Premium Dark Footer */}
-      <Footer
-        onOpenLegal={(type) => setLegalModalType(type)}
-        onSelectService={handleSelectServiceFromCard}
-      />
-
-      {/* Floating Action Buttons (WhatsApp, Scroll-To-Top, Mobile Bar) */}
-      <FloatingCTAs onBookClick={() => scrollToSection('booking')} />
-
-      {/* Legal Information Modal */}
-      <LegalModal
-        type={legalModalType}
-        onClose={() => setLegalModalType(null)}
-      />
-
-      {/* Toast Notification */}
-      <Toast
-        message={toastMessage}
-        onClose={() => setToastMessage(null)}
-      />
-    </div>
+        {/* Toast Notification */}
+        <Toast
+          message={toastMessage}
+          onClose={() => setToastMessage(null)}
+        />
+      </div>
+    </BrowserRouter>
   );
 }
