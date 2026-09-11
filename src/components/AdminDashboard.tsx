@@ -30,7 +30,10 @@ import {
   Eye,
   LogOut,
   X,
-  FileCheck
+  FileCheck,
+  BarChart3,
+  Download,
+  ChevronRight
 } from 'lucide-react';
 import {
   Booking,
@@ -43,7 +46,8 @@ import {
   JobCard,
   InventoryPart,
   PickupDropRequest,
-  AuditLog
+  AuditLog,
+  ServiceHistoryRecord
 } from '../types';
 import { BookingService } from '../services/bookingService';
 import { StorageService, STORAGE_KEYS } from '../services/storageService';
@@ -55,6 +59,7 @@ import { InventoryService } from '../services/inventoryService';
 import { PickupDropService } from '../services/pickupDropService';
 import { AuditService } from '../services/auditService';
 import { AuthService } from '../services/authService';
+import { ServiceHistoryService } from '../services/serviceHistoryService';
 
 export const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -70,11 +75,15 @@ export const AdminDashboard: React.FC = () => {
   const [inventoryParts, setInventoryParts] = useState<InventoryPart[]>([]);
   const [pickupRequests, setPickupRequests] = useState<PickupDropRequest[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [serviceHistory, setServiceHistory] = useState<ServiceHistoryRecord[]>([]);
   const [selectedJobCard, setSelectedJobCard] = useState<JobCard | null>(null);
+  const [selectedHistoryRecord, setSelectedHistoryRecord] = useState<ServiceHistoryRecord | null>(null);
 
   // Search & Filter
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [historySearch, setHistorySearch] = useState('');
+  const [historyBrandFilter, setHistoryBrandFilter] = useState('all');
 
   // Pricing Matrix test calculator state
   const [calcBrand, setCalcBrand] = useState('BMW');
@@ -116,6 +125,7 @@ export const AdminDashboard: React.FC = () => {
     setInventoryParts(InventoryService.getAllParts());
     setPickupRequests(PickupDropService.getAllRequests());
     setAuditLogs(AuditService.getAllLogs());
+    setServiceHistory(ServiceHistoryService.getAllHistory());
   };
 
   useEffect(() => {
@@ -261,6 +271,48 @@ export const AdminDashboard: React.FC = () => {
     });
   }, [bookings, searchQuery, statusFilter]);
 
+  // Filtered Service History Records
+  const filteredServiceHistory = useMemo(() => {
+    return serviceHistory.filter((rec) => {
+      const matchSearch =
+        rec.vehicleRegNumber.toLowerCase().includes(historySearch.toLowerCase()) ||
+        rec.vehicleDetails.toLowerCase().includes(historySearch.toLowerCase()) ||
+        rec.customerName.toLowerCase().includes(historySearch.toLowerCase()) ||
+        rec.customerPhone.includes(historySearch) ||
+        rec.technicianName.toLowerCase().includes(historySearch.toLowerCase()) ||
+        rec.serviceType.toLowerCase().includes(historySearch.toLowerCase());
+
+      const matchBrand = historyBrandFilter === 'all' || rec.vehicleDetails.toLowerCase().startsWith(historyBrandFilter.toLowerCase());
+      return matchSearch && matchBrand;
+    });
+  }, [serviceHistory, historySearch, historyBrandFilter]);
+
+  const handleExportHistoryCSV = () => {
+    const headers = ['Record ID', 'Date', 'Vehicle', 'Reg Number', 'Customer', 'Phone', 'Service Type', 'Odometer KM', 'Total Cost INR', 'Technician', 'Warranty'];
+    const rows = filteredServiceHistory.map((r) => [
+      r.id,
+      r.date,
+      `"${r.vehicleDetails}"`,
+      r.vehicleRegNumber,
+      `"${r.customerName}"`,
+      r.customerPhone,
+      `"${r.serviceType}"`,
+      r.odometer,
+      r.totalCost,
+      `"${r.technicianName}"`,
+      `"${r.warrantyPeriod || '12 Months'}"`
+    ]);
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `torqx_service_history_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // Pricing matrix test result
   const calculatedTestPrice = useMemo(() => {
     return PricingService.calculatePricing({
@@ -344,6 +396,7 @@ export const AdminDashboard: React.FC = () => {
           { id: 'pricing', label: 'Dynamic Pricing', icon: DollarSign },
           { id: 'technicians', label: `Technicians (${technicians.length})`, icon: Users },
           { id: 'invoices', label: `Invoices (${invoices.length})`, icon: FileCheck },
+          { id: 'reports', label: `Service History & Reports (${serviceHistory.length})`, icon: BarChart3 },
           { id: 'coupons', label: `Coupons (${coupons.length})`, icon: Tag },
           { id: 'reviews', label: `Reviews (${reviews.length})`, icon: Star },
           { id: 'audit', label: `Audit Trail (${auditLogs.length})`, icon: History }
@@ -1369,6 +1422,163 @@ export const AdminDashboard: React.FC = () => {
         </div>
       )}
 
+      {/* TAB: SERVICE HISTORY & REPORTS */}
+      {activeTab === 'reports' && (
+        <div className="bg-[#12161f] border border-white/10 rounded-2xl p-6 sm:p-8 space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
+            <div>
+              <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                <BarChart3 className="w-5 h-5 text-amber-400" />
+                Workshop Service History & Fleet Analytics
+              </h3>
+              <p className="text-xs text-neutral-400 mt-1">
+                Centralized registry of delivered work orders, parts consumed, technician allocations, and customer recall milestones.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleExportHistoryCSV}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white font-tech text-xs uppercase tracking-wider transition-colors"
+              >
+                <Download className="w-4 h-4" />
+                <span>Export CSV</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Historical Analytics Mini Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="p-4 rounded-xl bg-black/40 border border-white/10">
+              <span className="text-[10px] font-tech uppercase text-neutral-400 block">Total Work Orders</span>
+              <span className="text-2xl font-bold font-mono text-white mt-1 block">{serviceHistory.length}</span>
+              <span className="text-[10px] text-emerald-400">100% Quality Inspected</span>
+            </div>
+
+            <div className="p-4 rounded-xl bg-black/40 border border-white/10">
+              <span className="text-[10px] font-tech uppercase text-neutral-400 block">Historical Turnover</span>
+              <span className="text-2xl font-bold font-mono text-white mt-1 block">
+                ₹{serviceHistory.reduce((acc, r) => acc + r.totalCost, 0).toLocaleString('en-IN')}
+              </span>
+              <span className="text-[10px] text-neutral-400">Excl. GST adjustments</span>
+            </div>
+
+            <div className="p-4 rounded-xl bg-black/40 border border-white/10">
+              <span className="text-[10px] font-tech uppercase text-neutral-400 block">Average Ticket Size</span>
+              <span className="text-2xl font-bold font-mono text-amber-400 mt-1 block">
+                ₹{serviceHistory.length > 0 ? Math.round(serviceHistory.reduce((acc, r) => acc + r.totalCost, 0) / serviceHistory.length).toLocaleString('en-IN') : 0}
+              </span>
+              <span className="text-[10px] text-neutral-400">Per vehicle work order</span>
+            </div>
+
+            <div className="p-4 rounded-xl bg-black/40 border border-white/10">
+              <span className="text-[10px] font-tech uppercase text-neutral-400 block">Active Warranties</span>
+              <span className="text-2xl font-bold font-mono text-emerald-400 mt-1 block">
+                {serviceHistory.filter((r) => !r.warrantyPeriod || r.warrantyPeriod.includes('12')).length}
+              </span>
+              <span className="text-[10px] text-emerald-400">12 Mo OEM Guarantee</span>
+            </div>
+          </div>
+
+          {/* Filter & Search Bar */}
+          <div className="flex flex-col sm:flex-row gap-3 justify-between items-stretch sm:items-center">
+            <div className="relative flex-1 max-w-md">
+              <Search className="w-4 h-4 text-neutral-400 absolute left-3.5 top-3" />
+              <input
+                type="text"
+                value={historySearch}
+                onChange={(e) => setHistorySearch(e.target.value)}
+                placeholder="Search Reg#, Owner, Vehicle, Service, or Tech..."
+                className="w-full bg-black/40 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-amber-400"
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-neutral-400" />
+              <select
+                value={historyBrandFilter}
+                onChange={(e) => setHistoryBrandFilter(e.target.value)}
+                className="bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs text-white font-tech uppercase focus:outline-none focus:border-amber-400"
+              >
+                <option value="all">All Vehicle Brands</option>
+                <option value="BMW">BMW</option>
+                <option value="Audi">Audi</option>
+                <option value="Mercedes">Mercedes-Benz</option>
+                <option value="Skoda">Skoda</option>
+                <option value="Volkswagen">Volkswagen</option>
+                <option value="Hyundai">Hyundai</option>
+                <option value="Tata">Tata</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Service History Records Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-white/10 text-neutral-400 font-tech uppercase tracking-wider">
+                  <th className="py-3 px-3">Date</th>
+                  <th className="py-3 px-3">Vehicle Details</th>
+                  <th className="py-3 px-3">Customer Contact</th>
+                  <th className="py-3 px-3">Service Scope</th>
+                  <th className="py-3 px-3">Odometer</th>
+                  <th className="py-3 px-3">Technician</th>
+                  <th className="py-3 px-3 text-right">Turnover</th>
+                  <th className="py-3 px-3 text-center">Inspect</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {filteredServiceHistory.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="py-8 text-center text-neutral-500 font-tech uppercase">
+                      No matching historical service records found.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredServiceHistory.map((rec) => (
+                    <tr key={rec.id} className="hover:bg-white/5 transition-colors">
+                      <td className="py-3.5 px-3 text-white font-tech font-bold">{rec.date}</td>
+                      <td className="py-3.5 px-3">
+                        <strong className="text-white block">{rec.vehicleDetails}</strong>
+                        <span className="text-amber-400 font-mono text-[11px] font-bold">{rec.vehicleRegNumber}</span>
+                      </td>
+                      <td className="py-3.5 px-3">
+                        <span className="text-neutral-200 block">{rec.customerName}</span>
+                        <span className="text-neutral-400 font-mono text-[11px]">{rec.customerPhone}</span>
+                      </td>
+                      <td className="py-3.5 px-3 text-neutral-300">
+                        <span>{rec.serviceType}</span>
+                        {rec.partsReplaced && rec.partsReplaced.length > 0 && (
+                          <span className="text-[10px] text-neutral-500 block font-mono">
+                            {rec.partsReplaced.length} OEM parts replaced
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-3 font-mono text-neutral-300">
+                        {rec.odometer.toLocaleString('en-IN')} KM
+                      </td>
+                      <td className="py-3.5 px-3 text-neutral-300">{rec.technicianName}</td>
+                      <td className="py-3.5 px-3 text-right font-mono font-bold text-white">
+                        ₹{rec.totalCost.toLocaleString('en-IN')}
+                      </td>
+                      <td className="py-3.5 px-3 text-center">
+                        <button
+                          onClick={() => setSelectedHistoryRecord(rec)}
+                          className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-amber-400 hover:text-black text-amber-300 font-tech text-xs uppercase tracking-wider transition-all inline-flex items-center gap-1"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>Audit</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* JOB CARD DETAILS MODAL */}
       {selectedJobCard && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
@@ -1505,6 +1715,104 @@ export const AdminDashboard: React.FC = () => {
                 className="px-5 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white font-tech uppercase text-xs"
               >
                 Close Job Card
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SERVICE HISTORY RECORD INSPECTION MODAL */}
+      {selectedHistoryRecord && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#12161f] border border-white/15 rounded-2xl max-w-2xl w-full p-6 sm:p-8 space-y-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-start border-b border-white/10 pb-4">
+              <div>
+                <span className="text-xs font-tech uppercase text-amber-400 font-bold tracking-widest block">
+                  Certified Archival Service Record
+                </span>
+                <h3 className="text-2xl font-mono font-extrabold text-white">
+                  {selectedHistoryRecord.id}
+                </h3>
+                <p className="text-xs text-neutral-400 mt-1">
+                  Delivered on <strong className="text-white">{selectedHistoryRecord.date}</strong>
+                </p>
+              </div>
+              <button
+                onClick={() => setSelectedHistoryRecord(null)}
+                className="p-1 rounded-lg bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Vehicle & Customer Details */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-4 rounded-xl bg-black/40 border border-white/10 text-xs">
+              <div>
+                <span className="text-neutral-500 uppercase font-tech text-[10px] block">Vehicle</span>
+                <strong className="text-white block">{selectedHistoryRecord.vehicleDetails}</strong>
+                <span className="text-amber-400 font-mono text-[11px] font-bold">{selectedHistoryRecord.vehicleRegNumber}</span>
+              </div>
+              <div>
+                <span className="text-neutral-500 uppercase font-tech text-[10px] block">Customer</span>
+                <strong className="text-white block">{selectedHistoryRecord.customerName}</strong>
+                <span className="text-neutral-400 font-mono text-[11px]">{selectedHistoryRecord.customerPhone}</span>
+              </div>
+              <div>
+                <span className="text-neutral-500 uppercase font-tech text-[10px] block">Technician & Odometer</span>
+                <strong className="text-white block">{selectedHistoryRecord.technicianName}</strong>
+                <span className="text-neutral-300 font-mono text-[11px]">{selectedHistoryRecord.odometer.toLocaleString('en-IN')} KM</span>
+              </div>
+            </div>
+
+            {/* Scope & Parts */}
+            <div className="space-y-2">
+              <span className="text-xs font-tech uppercase tracking-wider text-neutral-400 block">
+                Executed Service Scope
+              </span>
+              <div className="p-3.5 rounded-xl bg-black/30 border border-white/10 text-xs text-neutral-200">
+                {selectedHistoryRecord.serviceType}
+              </div>
+            </div>
+
+            {selectedHistoryRecord.partsReplaced && selectedHistoryRecord.partsReplaced.length > 0 && (
+              <div className="space-y-2">
+                <span className="text-xs font-tech uppercase tracking-wider text-neutral-400 block">
+                  OEM Parts Replaced & Documented
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  {selectedHistoryRecord.partsReplaced.map((part, pIdx) => (
+                    <span
+                      key={pIdx}
+                      className="px-3 py-1 rounded-lg bg-white/5 border border-white/10 text-xs text-neutral-200 font-mono flex items-center gap-1.5"
+                    >
+                      <Check className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>{part}</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Warranty & Cost Summary */}
+            <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2 text-emerald-300">
+                <Shield className="w-5 h-5 text-emerald-400 shrink-0" />
+                <span>Warranty: <strong>{selectedHistoryRecord.warrantyPeriod || '12 Months / 20,000 km'}</strong></span>
+              </div>
+              <div className="text-right">
+                <span className="text-neutral-400 text-[10px] block uppercase font-tech">Total Invoice Amount</span>
+                <strong className="text-lg font-mono font-bold text-white">
+                  ₹{selectedHistoryRecord.totalCost.toLocaleString('en-IN')}
+                </strong>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-white/10 flex justify-end gap-3">
+              <button
+                onClick={() => setSelectedHistoryRecord(null)}
+                className="px-5 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white font-tech uppercase text-xs"
+              >
+                Close Audit Sheet
               </button>
             </div>
           </div>

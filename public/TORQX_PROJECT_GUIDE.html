@@ -1,0 +1,1606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TORQX AUTOCARE — Master Project Blueprint & Architecture Guide</title>
+  <style>
+    :root {
+      --bg-dark: #090c10;
+      --bg-card: #121721;
+      --bg-card-hover: #18202d;
+      --bg-surface: #0d1117;
+      --border: rgba(255, 255, 255, 0.08);
+      --border-accent: rgba(245, 158, 11, 0.4);
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --text-dim: #6b7280;
+      --amber: #f59e0b;
+      --amber-glow: rgba(245, 158, 11, 0.2);
+      --red: #ef4444;
+      --emerald: #10b981;
+      --blue: #3b82f6;
+      --purple: #a855f7;
+      --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: var(--font-main);
+      line-height: 1.6;
+      font-size: 15px;
+      overflow-x: hidden;
+    }
+
+    /* Top Utility Header */
+    header.top-header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(9, 12, 16, 0.88);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      font-size: 1.1rem;
+    }
+
+    .brand-badge {
+      font-size: 0.65rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 9999px;
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(239, 68, 68, 0.2));
+      border: 1px solid var(--border-accent);
+      color: var(--amber);
+      font-family: var(--font-mono);
+      font-weight: 700;
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .mode-btn {
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      transition: all 0.2s ease;
+    }
+
+    .mode-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+
+    .mode-btn.active {
+      background: var(--amber);
+      color: #000;
+      border-color: var(--amber);
+      box-shadow: 0 0 14px var(--amber-glow);
+    }
+
+    .search-input {
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--border);
+      color: #fff;
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      outline: none;
+      width: 220px;
+      transition: all 0.2s;
+    }
+
+    .search-input:focus {
+      border-color: var(--amber);
+      box-shadow: 0 0 10px var(--amber-glow);
+    }
+
+    /* Layout wrapper */
+    .app-container {
+      display: flex;
+      min-height: calc(100vh - 60px);
+    }
+
+    /* Sidebar Navigation */
+    aside.sidebar {
+      width: 280px;
+      background: var(--bg-surface);
+      border-right: 1px solid var(--border);
+      padding: 1.5rem 1rem;
+      position: sticky;
+      top: 57px;
+      height: calc(100vh - 57px);
+      overflow-y: auto;
+      flex-shrink: 0;
+    }
+
+    .nav-group-title {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+      margin: 1.2rem 0 0.5rem 0.5rem;
+      font-weight: 800;
+      font-family: var(--font-mono);
+    }
+
+    .sidebar-link {
+      display: block;
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.85rem;
+      transition: all 0.15s ease;
+      margin-bottom: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .sidebar-link:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: #fff;
+      transform: translateX(3px);
+    }
+
+    .sidebar-link.active {
+      background: rgba(245, 158, 11, 0.15);
+      color: var(--amber);
+      font-weight: 700;
+      border-left: 3px solid var(--amber);
+    }
+
+    /* Main Content Area */
+    main.content {
+      flex: 1;
+      padding: 2.5rem 3rem;
+      max-width: 1200px;
+    }
+
+    @media (max-width: 1024px) {
+      aside.sidebar {
+        display: none;
+      }
+      main.content {
+        padding: 1.5rem;
+      }
+    }
+
+    /* Section Styling */
+    section {
+      margin-bottom: 4.5rem;
+      scroll-margin-top: 80px;
+    }
+
+    .section-tag {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: var(--amber);
+      font-family: var(--font-mono);
+      font-weight: 800;
+      display: inline-block;
+      margin-bottom: 0.5rem;
+    }
+
+    h1.hero-title {
+      font-size: 3rem;
+      font-weight: 900;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+      margin-bottom: 1rem;
+      background: linear-gradient(135deg, #ffffff 40%, #9ca3af 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    h2.section-heading {
+      font-size: 1.85rem;
+      font-weight: 800;
+      margin-bottom: 1.5rem;
+      color: #fff;
+      letter-spacing: -0.01em;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.75rem;
+    }
+
+    p.lead-text {
+      font-size: 1.15rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin-bottom: 1.5rem;
+    }
+
+    /* Cards & Grids */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      transition: all 0.25s ease;
+      position: relative;
+    }
+
+    .card:hover {
+      background: var(--bg-card-hover);
+      border-color: rgba(255, 255, 255, 0.15);
+      transform: translateY(-2px);
+    }
+
+    .card.accent {
+      border-color: var(--border-accent);
+      background: linear-gradient(180deg, rgba(245, 158, 11, 0.05), var(--bg-card));
+    }
+
+    .stat-number {
+      font-family: var(--font-mono);
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--amber);
+      margin-bottom: 0.25rem;
+    }
+
+    .stat-label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-dim);
+      font-weight: 700;
+    }
+
+    /* Flow Chart / Interactive Stage Pills */
+    .flow-scroller {
+      display: flex;
+      gap: 0.75rem;
+      overflow-x: auto;
+      padding: 1rem 0;
+      margin: 1.5rem 0;
+    }
+
+    .flow-step-card {
+      flex: 0 0 220px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+
+    .flow-step-card:hover {
+      border-color: var(--amber);
+      transform: translateY(-3px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+    }
+
+    .flow-step-card.active {
+      border-color: var(--amber);
+      background: rgba(245, 158, 11, 0.12);
+    }
+
+    .flow-step-num {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--amber);
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+
+    .flow-step-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .flow-step-actor {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      margin-top: 0.5rem;
+    }
+
+    /* Interactive Details Box */
+    .step-detail-box {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-accent);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-top: 1rem;
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* State Machine Grid */
+    .state-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    .state-badge {
+      display: inline-block;
+      padding: 0.25rem 0.6rem;
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .state-badge.confirmed { background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.4); }
+    .state-badge.progress { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); }
+    .state-badge.done { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); }
+    .state-badge.cancelled { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); }
+
+    /* Interactive Pricing Calculator */
+    .calc-container {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 2rem;
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 2rem;
+    }
+
+    @media (max-width: 850px) {
+      .calc-container {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .form-group {
+      margin-bottom: 1.25rem;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-dim);
+      font-weight: 700;
+      margin-bottom: 0.4rem;
+    }
+
+    .form-select, .form-input {
+      width: 100%;
+      background: #000;
+      border: 1px solid var(--border);
+      padding: 0.65rem 0.85rem;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 0.9rem;
+      outline: none;
+    }
+
+    .form-select:focus, .form-input:focus {
+      border-color: var(--amber);
+    }
+
+    .addon-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.6rem 0.8rem;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 0.5rem;
+      cursor: pointer;
+    }
+
+    .addon-item:hover {
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .calc-bill {
+      background: #000;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .bill-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.75rem;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    .bill-row.total {
+      border-top: 1px solid var(--border);
+      padding-top: 1rem;
+      margin-top: 1rem;
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    /* Database Architecture Table */
+    .db-table-pill {
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .db-table-name {
+      font-family: var(--font-mono);
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--amber);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.4rem;
+    }
+
+    .db-fields {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    /* API Endpoint Cards */
+    .api-badge {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+    .api-get { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .api-post { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+    .api-patch { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .api-delete { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+
+    .api-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 1rem;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 0.5rem;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+    }
+
+    /* Demo Script Runner */
+    .demo-step-box {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.08), rgba(0, 0, 0, 0.6));
+      border: 1px solid var(--border-accent);
+      border-radius: 12px;
+      padding: 2rem;
+      margin: 1.5rem 0;
+    }
+
+    .demo-step-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .demo-step-counter {
+      font-family: var(--font-mono);
+      font-size: 0.9rem;
+      color: var(--amber);
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .demo-nav-btn {
+      padding: 0.5rem 1.25rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      background: #fff;
+      color: #000;
+      border: none;
+      transition: all 0.2s;
+    }
+
+    .demo-nav-btn:hover {
+      background: var(--amber);
+    }
+
+    /* Q&A Accordion */
+    .qa-item {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 0.75rem;
+      overflow: hidden;
+    }
+
+    .qa-question {
+      padding: 1rem 1.25rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      user-select: none;
+    }
+
+    .qa-question:hover {
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .qa-answer {
+      padding: 0 1.25rem 1.25rem 1.25rem;
+      color: var(--text-muted);
+      display: none;
+      border-top: 1px solid var(--border);
+      padding-top: 1rem;
+    }
+
+    /* Table styles */
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      margin: 1rem 0;
+    }
+
+    table.data-table th, table.data-table td {
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    table.data-table th {
+      background: rgba(255, 255, 255, 0.03);
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-dim);
+    }
+
+    /* Progress bar */
+    .progress-bar-bg {
+      height: 8px;
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 999px;
+      overflow: hidden;
+      margin: 0.5rem 0 1.25rem 0;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--amber), #ef4444);
+    }
+
+    /* Floating Back to Top */
+    .back-top {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: var(--bg-card);
+      border: 1px solid var(--border-accent);
+      color: var(--amber);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      text-decoration: none;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      transition: all 0.2s;
+      z-index: 90;
+    }
+
+    .back-top:hover {
+      background: var(--amber);
+      color: #000;
+      transform: scale(1.1);
+    }
+
+    /* Mode filters */
+    body.mode-client .dev-only {
+      display: none !important;
+    }
+    body.mode-dev .client-only {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header Navigation -->
+  <header class="top-header">
+    <div class="brand-logo">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--amber);">
+        <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+      </svg>
+      <span>TORQX AUTOCARE</span>
+      <span class="brand-badge">SYSTEM BLUEPRINT v1.0</span>
+    </div>
+
+    <div class="header-controls">
+      <input type="text" id="globalSearch" class="search-input" placeholder="Search architecture, APIs, flow..." />
+      <button class="mode-btn active" id="btnModeAll" onclick="setMode('all')">Complete Guide</button>
+      <button class="mode-btn" id="btnModeClient" onclick="setMode('client')">Client Presentation</button>
+      <button class="mode-btn" id="btnModeDev" onclick="setMode('dev')">Developer / Architecture</button>
+      <button class="mode-btn" id="btnModeInterview" onclick="setMode('interview')">Interview Mode</button>
+    </div>
+  </header>
+
+  <div class="app-container">
+
+    <!-- Sticky Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="nav-group-title">FOUNDATION</div>
+      <a href="#hero" class="sidebar-link active">1. Overview & Hero</a>
+      <a href="#what-is-torqx" class="sidebar-link">2. What is TORQX?</a>
+      <a href="#system-flow" class="sidebar-link">3. 26-Step Master Flow</a>
+      
+      <div class="nav-group-title">THREE PORTALS</div>
+      <a href="#customer-journey" class="sidebar-link">4. Customer Journey</a>
+      <a href="#admin-operations" class="sidebar-link">5. Admin Operations</a>
+      <a href="#technician-workflow" class="sidebar-link">6. Technician Workflow</a>
+      
+      <div class="nav-group-title">CORE ENGINES</div>
+      <a href="#pricing-engine" class="sidebar-link">7. Dynamic Pricing Engine</a>
+      <a href="#booking-wizard" class="sidebar-link">8. Booking Wizard</a>
+      <a href="#job-card-system" class="sidebar-link">9. Job Card Architecture</a>
+      <a href="#state-machine" class="sidebar-link">10. 12-State State Machine</a>
+      <a href="#digital-inspection" class="sidebar-link">11. Digital 60-Pt Inspection</a>
+      <a href="#quotation-approval" class="sidebar-link">12. Quotations & Approvals</a>
+      <a href="#inventory-parts" class="sidebar-link">13. Inventory & Stock Lifecycle</a>
+      <a href="#labour-management" class="sidebar-link">14. Labour Hours & Tiers</a>
+      <a href="#quality-check" class="sidebar-link">15. Quality Control Gate</a>
+      <a href="#invoices-payment" class="sidebar-link">16. Invoices & Payments</a>
+      <a href="#delivery-handover" class="sidebar-link">17. Valet Logistics & Delivery</a>
+      <a href="#service-history" class="sidebar-link">18. Archival Service History</a>
+
+      <div class="nav-group-title dev-only">ENGINEERING & SPEC</div>
+      <a href="#rbac-matrix" class="sidebar-link dev-only">19. RBAC Permission Matrix</a>
+      <a href="#database-schema" class="sidebar-link dev-only">20. Database Schema (22 Tables)</a>
+      <a href="#backend-architecture" class="sidebar-link dev-only">21. Backend Architecture (FastAPI)</a>
+      <a href="#api-roadmap" class="sidebar-link dev-only">22. REST API Roadmap</a>
+      <a href="#folder-structure" class="sidebar-link dev-only">23. Codebase Structure</a>
+      <a href="#mock-vs-real" class="sidebar-link dev-only">24. Mock vs Real Breakdown</a>
+
+      <div class="nav-group-title">WALKTHROUGH & INTERVIEW</div>
+      <a href="#demo-mode" class="sidebar-link">25. Interactive Demo Script</a>
+      <a href="#interview-qa" class="sidebar-link">26. Interview Deep Dive</a>
+      <a href="#business-value" class="sidebar-link">27. Business Value & ROI</a>
+      <a href="#future-roadmap" class="sidebar-link">28. Future Roadmap & AI</a>
+      <a href="#system-map" class="sidebar-link">29. Giant Architecture Map</a>
+    </aside>
+
+    <!-- Main Content Container -->
+    <main class="content">
+
+      <!-- SECTION 1: HERO -->
+      <section id="hero">
+        <span class="section-tag">System Documentation & Interactive Blueprint</span>
+        <h1 class="hero-title">TORQX AUTOCARE</h1>
+        <p class="lead-text">
+          Complete Garage Management & Customer Experience Platform.<br />
+          From vehicle booking to inspection, quotation, repair, payment, delivery and service history — one connected automotive ecosystem.
+        </p>
+
+        <!-- Project Status Badges -->
+        <div class="grid-4" style="margin-bottom: 2rem;">
+          <div class="card accent">
+            <span class="stat-number">100%</span>
+            <span class="stat-label">Frontend Workflow</span>
+            <div style="font-size:0.75rem; color:var(--emerald); margin-top:0.3rem;">● Completed & Connected</div>
+          </div>
+          <div class="card">
+            <span class="stat-number">3</span>
+            <span class="stat-label">Integrated Portals</span>
+            <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.3rem;">Customer • Admin • Tech</div>
+          </div>
+          <div class="card">
+            <span class="stat-number">26</span>
+            <span class="stat-label">End-to-End Stages</span>
+            <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.3rem;">Zero orphaned screens</div>
+          </div>
+          <div class="card">
+            <span class="stat-number">FastAPI</span>
+            <span class="stat-label">Planned Backend</span>
+            <div style="font-size:0.75rem; color:var(--amber); margin-top:0.3rem;">PostgreSQL + Redis</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 2: WHAT IS TORQX? -->
+      <section id="what-is-torqx">
+        <span class="section-tag">Core Concept</span>
+        <h2 class="section-heading">What is TORQX AUTOCARE?</h2>
+        <p class="lead-text">
+          TORQX AUTOCARE is not a simple static garage website. It is an end-to-end digital operations platform designed to bridge vehicle owners, workshop floor managers, and master diagnostic technicians into a single transparent pipeline.
+        </p>
+
+        <div style="background:var(--bg-surface); border:1px solid var(--border); border-radius:12px; padding:1.5rem; margin-bottom:2rem;">
+          <div style="font-family:var(--font-mono); font-size:0.85rem; color:var(--amber); margin-bottom:0.75rem; font-weight:700;">THE 16-POINT OPERATIONAL PIPELINE</div>
+          <div style="display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center; font-size:0.85rem;">
+            <span class="state-badge confirmed">Customer</span> →
+            <span class="state-badge confirmed">Booking</span> →
+            <span class="state-badge confirmed">Vehicle</span> →
+            <span class="state-badge progress">Garage Operations</span> →
+            <span class="state-badge progress">Technician</span> →
+            <span class="state-badge progress">Inspection</span> →
+            <span class="state-badge progress">Quotation</span> →
+            <span class="state-badge progress">Approval</span> →
+            <span class="state-badge progress">Parts Reservation</span> →
+            <span class="state-badge progress">Repair</span> →
+            <span class="state-badge progress">Quality Check</span> →
+            <span class="state-badge done">Invoice</span> →
+            <span class="state-badge done">Payment</span> →
+            <span class="state-badge done">Delivery</span> →
+            <span class="state-badge done">Service History</span> →
+            <span class="state-badge done">Future Reminders</span>
+          </div>
+        </div>
+
+        <div class="grid-3">
+          <div class="card">
+            <div style="font-family:var(--font-mono); color:var(--blue); font-weight:800; font-size:0.8rem; margin-bottom:0.5rem;">PORTAL 01</div>
+            <h3 style="font-size:1.2rem; margin-bottom:0.5rem; color:#fff;">Customer Portal</h3>
+            <div style="font-size:0.8rem; color:var(--text-dim); margin-bottom:1rem;">"Automotive Ownership Experience"</div>
+            <p style="font-size:0.85rem; color:var(--text-muted); line-height:1.5;">
+              Vehicle digital garage, 6-step booking wizard, dynamic model pricing, live visual status tracker, quotation digital signoff, mock invoice payment, and service history.
+            </p>
+          </div>
+
+          <div class="card">
+            <div style="font-family:var(--font-mono); color:var(--amber); font-weight:800; font-size:0.8rem; margin-bottom:0.5rem;">PORTAL 02</div>
+            <h3 style="font-size:1.2rem; margin-bottom:0.5rem; color:#fff;">Admin Operations</h3>
+            <div style="font-size:0.8rem; color:var(--text-dim); margin-bottom:1rem;">"Garage Operations Management"</div>
+            <p style="font-size:0.85rem; color:var(--text-muted); line-height:1.5;">
+              Central dispatcher console: live booking intake, bay occupancy allocation, master technician assignment, OEM inventory stock management, coupon engine, and CSV reporting.
+            </p>
+          </div>
+
+          <div class="card">
+            <div style="font-family:var(--font-mono); color:var(--emerald); font-weight:800; font-size:0.8rem; margin-bottom:0.5rem;">PORTAL 03</div>
+            <h3 style="font-size:1.2rem; margin-bottom:0.5rem; color:#fff;">Technician Portal</h3>
+            <div style="font-size:0.8rem; color:var(--text-dim); margin-bottom:1rem;">"Workshop Floor Job Execution"</div>
+            <p style="font-size:0.85rem; color:var(--text-muted); line-height:1.5;">
+              Tablet/mobile ergonomics with high contrast. Digital 60-point mechanical inspection entry, fault code logging, live parts requisition, and repair completion handoff.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 3: 26-STEP MASTER FLOW -->
+      <section id="system-flow">
+        <span class="section-tag">Interactive Architecture</span>
+        <h2 class="section-heading">26-Step Master System Workflow</h2>
+        <p class="lead-text">
+          Click any step in the horizontal chain below to inspect who performs it, what data is created, and the future database & API requirements.
+        </p>
+
+        <div class="flow-scroller" id="workflowScroller">
+          <!-- Populated by JavaScript -->
+        </div>
+
+        <div class="step-detail-box" id="stepDetailBox">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1rem;">
+            <div>
+              <span id="detailStepNum" style="font-family:var(--font-mono); color:var(--amber); font-weight:800; font-size:0.8rem;">STEP 01</span>
+              <h3 id="detailStepTitle" style="color:#fff; font-size:1.4rem;">Customer Registration</h3>
+            </div>
+            <span id="detailStepActor" style="padding:0.3rem 0.6rem; border-radius:4px; font-size:0.75rem; background:rgba(255,255,255,0.1); font-weight:700;">Customer</span>
+          </div>
+
+          <div class="grid-2">
+            <div>
+              <h4 style="font-size:0.85rem; text-transform:uppercase; color:var(--text-dim); margin-bottom:0.4rem;">What Happens?</h4>
+              <p id="detailStepDesc" style="color:var(--text-muted); font-size:0.9rem;"></p>
+
+              <h4 style="font-size:0.85rem; text-transform:uppercase; color:var(--text-dim); margin:1rem 0 0.4rem 0;">Data Artifact Created</h4>
+              <p id="detailStepData" style="font-family:var(--font-mono); color:var(--emerald); font-size:0.85rem;"></p>
+            </div>
+
+            <div>
+              <h4 style="font-size:0.85rem; text-transform:uppercase; color:var(--text-dim); margin-bottom:0.4rem;">Screen Involved</h4>
+              <p id="detailStepScreen" style="color:var(--text-muted); font-size:0.9rem;"></p>
+
+              <h4 style="font-size:0.85rem; text-transform:uppercase; color:var(--text-dim); margin:1rem 0 0.4rem 0;">Future Database & API Contract</h4>
+              <p id="detailStepApi" style="font-family:var(--font-mono); color:var(--blue); font-size:0.85rem;"></p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 4: CUSTOMER JOURNEY -->
+      <section id="customer-journey">
+        <span class="section-tag">Ownership Experience</span>
+        <h2 class="section-heading">Customer Journey Walkthrough</h2>
+        <p class="lead-text">
+          Designed to eliminate friction, unexpected charges, and phone-tag updates. Customers enjoy complete clarity from quote to collection.
+        </p>
+
+        <div class="grid-2">
+          <div class="card">
+            <h3 style="color:#fff; font-size:1.1rem; margin-bottom:0.75rem;">1. Vehicle Onboarding & Pricing</h3>
+            <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1rem;">
+              The customer inputs vehicle brand, model, and registration number. The system retrieves factory-recommended service tiers and calculates segment-specific pricing (e.g. BMW 3-Series base ₹8,500 vs Hyundai Creta base ₹3,800).
+            </p>
+            <ul style="font-size:0.85rem; color:var(--text-muted); list-style-position:inside; line-height:1.8;">
+              <li>Automatic VIN / Registration recognition</li>
+              <li>Multi-vehicle garage storage</li>
+              <li>Calculated delivery estimates</li>
+            </ul>
+          </div>
+
+          <div class="card">
+            <h3 style="color:#fff; font-size:1.1rem; margin-bottom:0.75rem;">2. Transparent Quotation Approval</h3>
+            <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1rem;">
+              If the technician identifies worn brake pads or leaking struts during inspection, a digital quotation is pushed directly to the customer's phone. No repair is started until digital approval is granted.
+            </p>
+            <ul style="font-size:0.85rem; color:var(--text-muted); list-style-position:inside; line-height:1.8;">
+              <li>Line-by-line parts & labour itemization</li>
+              <li>1-Click Approve or Scope Revision request</li>
+              <li>Real-time push notification to technician</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 5: ADMIN OPERATIONS -->
+      <section id="admin-operations">
+        <span class="section-tag">Workshop Dispatch</span>
+        <h2 class="section-heading">Admin Operations Hub</h2>
+        <p class="lead-text">
+          The garage dispatcher oversees incoming requests, workshop bay availability, technician load balancing, inventory parts issuance, and revenue analytics.
+        </p>
+
+        <div class="grid-3" style="margin-bottom:1.5rem;">
+          <div class="card">
+            <h4 style="color:#fff; font-size:0.95rem; margin-bottom:0.5rem;">Service Bay Capacity</h4>
+            <p style="font-size:0.85rem; color:var(--text-muted);">
+              Controls physical floor allocation (Bays 1-4). Automatically marks a bay OCCUPIED upon vehicle check-in and releases it upon handover.
+            </p>
+          </div>
+          <div class="card">
+            <h4 style="color:#fff; font-size:0.95rem; margin-bottom:0.5rem;">Technician Balancing</h4>
+            <p style="font-size:0.85rem; color:var(--text-muted);">
+              Tracks technician allocations (Master Engine Tech, Electrical Lead, Chassis Specialist) ensuring no single technician is overloaded.
+            </p>
+          </div>
+          <div class="card">
+            <h4 style="color:#fff; font-size:0.95rem; margin-bottom:0.5rem;">Stock Reservation</h4>
+            <p style="font-size:0.85rem; color:var(--text-muted);">
+              When a job card requires synthetic oil or brake pads, inventory is reserved to prevent double-allocation before physical installation.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 6: TECHNICIAN WORKFLOW -->
+      <section id="technician-workflow">
+        <span class="section-tag">Shop Floor Execution</span>
+        <h2 class="section-heading">Technician Workflow & Tablet UX</h2>
+        <p class="lead-text">
+          Engineered specifically for mechanics working with oily gloves and harsh shop lighting: high-contrast dark palette, 48px minimum touch targets, fast single-tap status inputs, and zero clutter.
+        </p>
+
+        <div class="card">
+          <div class="grid-3">
+            <div>
+              <div style="color:var(--amber); font-weight:700; font-size:0.85rem; margin-bottom:0.25rem;">PHASE A</div>
+              <strong style="color:#fff; font-size:1rem; display:block; margin-bottom:0.5rem;">Vehicle Check & DVI</strong>
+              <p style="color:var(--text-muted); font-size:0.85rem;">
+                Records odometer, checks tyre tread depths, tests battery voltage, and tags items as GOOD, ATTENTION, or CRITICAL.
+              </p>
+            </div>
+            <div>
+              <div style="color:var(--amber); font-weight:700; font-size:0.85rem; margin-bottom:0.25rem;">PHASE B</div>
+              <strong style="color:#fff; font-size:1rem; display:block; margin-bottom:0.5rem;">Parts Requisition</strong>
+              <p style="color:var(--text-muted); font-size:0.85rem;">
+                Selects OEM spare parts from inventory dropdown. Checks warehouse quantities in real time and submits additional work orders.
+              </p>
+            </div>
+            <div>
+              <div style="color:var(--amber); font-weight:700; font-size:0.85rem; margin-bottom:0.25rem;">PHASE C</div>
+              <strong style="color:#fff; font-size:1rem; display:block; margin-bottom:0.5rem;">Quality Handover</strong>
+              <p style="color:var(--text-muted); font-size:0.85rem;">
+                Completes test drive, runs final OBD-II clearing scan, and transitions job card to QUALITY_CHECK for supervisor sign-off.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 7: DYNAMIC PRICING ENGINE -->
+      <section id="pricing-engine">
+        <span class="section-tag">Interactive Simulation</span>
+        <h2 class="section-heading">Dynamic Pricing Engine</h2>
+        <p class="lead-text">
+          Pricing adapts mathematically based on Vehicle Segment multiplier, Service Scope, Engine Oil specifications, and 18% GST. Test the real algorithm live:
+        </p>
+
+        <div class="calc-container">
+          <div>
+            <h3 style="color:#fff; font-size:1.1rem; margin-bottom:1rem;">Service Parameters</h3>
+            <div class="form-group">
+              <label>Select Vehicle Model</label>
+              <select id="calcVehicle" class="form-select" onchange="recalculatePrice()">
+                <option value="luxury">BMW 3 Series / Audi A4 / Mercedes C-Class (Luxury Tier - 1.8x)</option>
+                <option value="premium">Skoda Octavia / VW Tiguan / Jeep Compass (Premium Tier - 1.4x)</option>
+                <option value="standard" selected>Hyundai Creta / Kia Seltos / Tata Harrier (Executive Tier - 1.0x)</option>
+                <option value="economy">Maruti Swift / Hyundai i20 (Compact Tier - 0.85x)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Service Package</label>
+              <select id="calcService" class="form-select" onchange="recalculatePrice()">
+                <option value="3800">Periodic Scheduled Maintenance (Base ₹3,800)</option>
+                <option value="7200">Major Comprehensive Service (Base ₹7,200)</option>
+                <option value="2400">Braking Overhaul & Fluid Bleed (Base ₹2,400)</option>
+                <option value="1900">AC Climate Antibacterial Service (Base ₹1,900)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Optional Add-ons</label>
+              <label class="addon-item">
+                <input type="checkbox" id="addonOilFlush" onchange="recalculatePrice()" />
+                <span style="font-size:0.85rem; color:#fff;">Engine Internal Flush & Carbon Dissolve (+₹650)</span>
+              </label>
+              <label class="addon-item">
+                <input type="checkbox" id="addonWheelAlignment" onchange="recalculatePrice()" />
+                <span style="font-size:0.85rem; color:#fff;">Laser 3D Wheel Alignment & Balancing (+₹1,200)</span>
+              </label>
+              <label class="addon-item">
+                <input type="checkbox" id="addonValet" onchange="recalculatePrice()" />
+                <span style="font-size:0.85rem; color:#fff;">Doorstep Chauffeur Valet Pickup & Drop (+₹450)</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="calc-bill">
+            <div>
+              <div style="font-family:var(--font-mono); font-size:0.75rem; color:var(--amber); margin-bottom:0.75rem; font-weight:700;">TRANSPARENT BILL BREAKDOWN</div>
+              <div class="bill-row">
+                <span>Base Service Adjusted</span>
+                <span id="billBase" class="bill-val font-mono">₹3,800</span>
+              </div>
+              <div class="bill-row">
+                <span>OEM Parts & Consumables</span>
+                <span id="billParts" class="bill-val font-mono">₹1,850</span>
+              </div>
+              <div class="bill-row">
+                <span>Selected Add-ons</span>
+                <span id="billAddons" class="bill-val font-mono">₹0</span>
+              </div>
+              <div class="bill-row">
+                <span>Subtotal</span>
+                <span id="billSubtotal" class="bill-val font-mono">₹5,650</span>
+              </div>
+              <div class="bill-row">
+                <span>GST @ 18% (CGST 9% + SGST 9%)</span>
+                <span id="billGst" class="bill-val font-mono">₹1,017</span>
+              </div>
+            </div>
+
+            <div class="bill-row total">
+              <span>Grand Total</span>
+              <span id="billTotal" style="color:var(--amber);" class="font-mono">₹6,667</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 8: 12-STATE STATE MACHINE -->
+      <section id="state-machine">
+        <span class="section-tag">State Integrity</span>
+        <h2 class="section-heading">12-State Service State Machine</h2>
+        <p class="lead-text">
+          TORQX strictly forbids illegal state jumps. A job cannot be marked COMPLETED without passing through QUALITY_CHECK and PAYMENT.
+        </p>
+
+        <div class="state-grid">
+          <div class="card">
+            <span class="state-badge confirmed">1. BOOKING_CONFIRMED</span>
+            <div style="font-size:0.8rem; color:var(--text-muted); margin-top:0.5rem;">Bay reserved. Awaiting vehicle arrival at garage.</div>
+          </div>
+          <div class="card">
+            <span class="state-badge confirmed">2. VEHICLE_RECEIVED</span>
+            <div style="font-size:0.8rem; color:var(--text-muted); margin-top:0.5rem;">Car enters shop. Job Card created. Bay occupied.</div>
+          </div>
+          <div class="card">
+            <span class="state-badge progress">3. INSPECTION</span>
+            <div style="font-size:0.8rem; color:var(--text-muted); margin-top:0.5rem;">Technician executes 60-point digital checklist.</div>
+          </div>
+          <div class="card">
+            <span class="state-badge progress">4. DIAGNOSIS</span>
+            <div style="font-size:0.8rem; color:var(--text-muted); margin-top:0.5rem;">Fault codes logged. Scope of work finalized.</div>
+          </div>
+          <div class="card">
+            <span class="state-badge progress">5. QUOTE_PENDING</span>
+            <div style="font-size:0.8rem; color:var(--text-muted); margin-top:0.5rem;">Quotation draft generated with parts & labour.</div>
+          </div>
+          <div class="card">
+            <span class="state-badge progress">6. APPROVAL_PENDING</span>
+            <div style="font-size:0.8rem; color:var(--text-muted); margin-top:0.5rem;">Customer reviewing digital estimate on portal.</div>
+          </div>
+          <div class="card">
+            <span class="state-badge progress">7. PARTS_RESERVED</span>
+            <div style="font-size:0.8rem; color:var(--text-muted); margin-top:0.5rem;">Inventory stock locked to job card to prevent shortage.</div>
+          </div>
+          <div class="card">
+            <span class="state-badge progress">8. WORK_IN_PROGRESS</span>
+            <div style="font-size:0.8rem; color:var(--text-muted); margin-top:0.5rem;">Technician actively servicing and replacing parts.</div>
+          </div>
+          <div class="card">
+            <span class="state-badge progress">9. QUALITY_CHECK</span>
+            <div style="font-size:0.8rem; color:var(--text-muted); margin-top:0.5rem;">Inspector conducts road test and 10-point audit.</div>
+          </div>
+          <div class="card">
+            <span class="state-badge done">10. READY_FOR_DELIVERY</span>
+            <div style="font-size:0.8rem; color:var(--text-muted); margin-top:0.5rem;">Vehicle detailed. Bay released. Invoice payable.</div>
+          </div>
+          <div class="card">
+            <span class="state-badge done">11. OUT_FOR_DELIVERY</span>
+            <div style="font-size:0.8rem; color:var(--text-muted); margin-top:0.5rem;">Valet driver en route to customer doorstep.</div>
+          </div>
+          <div class="card">
+            <span class="state-badge done">12. COMPLETED</span>
+            <div style="font-size:0.8rem; color:var(--text-muted); margin-top:0.5rem;">Payment settled. Warranty active. Record archived.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 9: DATABASE SCHEMA -->
+      <section id="database-schema" class="dev-only">
+        <span class="section-tag">Relational Architecture</span>
+        <h2 class="section-heading">Database Architecture (22 Relational Entities)</h2>
+        <p class="lead-text">
+          Designed for high-integrity PostgreSQL execution. Relational foreign keys ensure that job cards, invoices, and inventory logs are completely auditable.
+        </p>
+
+        <div class="grid-2">
+          <div class="db-table-pill">
+            <div class="db-table-name">
+              <span>bookings</span>
+              <span style="font-size:0.7rem; color:var(--text-dim);">PRIMARY ENTITY</span>
+            </div>
+            <div class="db-fields">
+              id: UUID PRIMARY KEY<br />
+              customer_id: UUID REFERENCES users(id)<br />
+              vehicle_id: UUID REFERENCES vehicles(id)<br />
+              service_type: VARCHAR(100)<br />
+              status: service_status_enum<br />
+              booking_date: DATE<br />
+              booking_slot: VARCHAR(20)<br />
+              bay_id: UUID REFERENCES service_bays(id)<br />
+              pickup_drop_type: delivery_enum<br />
+              estimated_amount: NUMERIC(10, 2)<br />
+              created_at: TIMESTAMP WITH TIME ZONE
+            </div>
+          </div>
+
+          <div class="db-table-pill">
+            <div class="db-table-name">
+              <span>job_cards</span>
+              <span style="font-size:0.7rem; color:var(--text-dim);">WORK ORDER</span>
+            </div>
+            <div class="db-fields">
+              id: UUID PRIMARY KEY<br />
+              booking_id: UUID REFERENCES bookings(id)<br />
+              job_card_number: VARCHAR(30) UNIQUE<br />
+              technician_id: UUID REFERENCES technicians(id)<br />
+              bay_id: UUID REFERENCES service_bays(id)<br />
+              status: job_status_enum<br />
+              current_km: INTEGER<br />
+              fuel_level: VARCHAR(10)<br />
+              inspection_id: UUID REFERENCES inspections(id)<br />
+              approval_status: approval_status_enum<br />
+              started_at: TIMESTAMP<br />
+              completed_at: TIMESTAMP
+            </div>
+          </div>
+
+          <div class="db-table-pill">
+            <div class="db-table-name">
+              <span>inventory_parts</span>
+              <span style="font-size:0.7rem; color:var(--text-dim);">STOCK LEDGER</span>
+            </div>
+            <div class="db-fields">
+              id: UUID PRIMARY KEY<br />
+              sku: VARCHAR(50) UNIQUE<br />
+              part_number: VARCHAR(50)<br />
+              name: VARCHAR(150)<br />
+              category: part_category_enum<br />
+              stock_quantity: INTEGER<br />
+              reserved_quantity: INTEGER<br />
+              cost_price: NUMERIC(10, 2)<br />
+              selling_price: NUMERIC(10, 2)<br />
+              min_threshold: INTEGER<br />
+              shelf_location: VARCHAR(50)
+            </div>
+          </div>
+
+          <div class="db-table-pill">
+            <div class="db-table-name">
+              <span>invoices</span>
+              <span style="font-size:0.7rem; color:var(--text-dim);">FINANCIAL LEDGER</span>
+            </div>
+            <div class="db-fields">
+              id: UUID PRIMARY KEY<br />
+              invoice_number: VARCHAR(30) UNIQUE<br />
+              booking_id: UUID REFERENCES bookings(id)<br />
+              job_card_id: UUID REFERENCES job_cards(id)<br />
+              subtotal: NUMERIC(10, 2)<br />
+              cgst_amount: NUMERIC(10, 2)<br />
+              sgst_amount: NUMERIC(10, 2)<br />
+              discount_amount: NUMERIC(10, 2)<br />
+              grand_total: NUMERIC(10, 2)<br />
+              payment_status: payment_status_enum<br />
+              payment_method: VARCHAR(50)
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 10: BACKEND ARCHITECTURE & APIS -->
+      <section id="backend-architecture" class="dev-only">
+        <span class="section-tag">Future Production Engineering</span>
+        <h2 class="section-heading">Backend & API Roadmap (FastAPI)</h2>
+        <p class="lead-text">
+          The planned production stack leverages asynchronous Python (FastAPI), SQLAlchemy 2.0 with asyncpg, Alembic migrations, and PostgreSQL hosted on AWS.
+        </p>
+
+        <div class="grid-2">
+          <div>
+            <h3 style="color:#fff; font-size:1.1rem; margin-bottom:1rem;">Production Stack</h3>
+            <ul style="font-size:0.9rem; color:var(--text-muted); list-style:none; line-height:2;">
+              <li>⚡ <strong>API Gateway:</strong> FastAPI (Python 3.12+ Async)</li>
+              <li>🐘 <strong>Database:</strong> PostgreSQL 16 (AWS RDS Multi-AZ)</li>
+              <li>🔄 <strong>Cache & Queue:</strong> Redis + Celery / ARQ</li>
+              <li>🛡️ <strong>Authentication:</strong> JWT Access + Refresh Tokens, bcrypt</li>
+              <li>💳 <strong>Payments:</strong> Razorpay Webhooks (Server-signed HMAC)</li>
+              <li>💬 <strong>Outreach:</strong> WhatsApp Business Cloud API + Twilio SMS</li>
+            </ul>
+          </div>
+
+          <div>
+            <h3 style="color:#fff; font-size:1.1rem; margin-bottom:1rem;">REST API Endpoints</h3>
+            <div class="api-item">
+              <span class="api-badge api-post">POST</span>
+              <span>/api/v1/bookings</span>
+              <span style="color:var(--text-dim); font-size:0.75rem;">Create Booking</span>
+            </div>
+            <div class="api-item">
+              <span class="api-badge api-patch">PATCH</span>
+              <span>/api/v1/job-cards/{id}/status</span>
+              <span style="color:var(--text-dim); font-size:0.75rem;">Transition State</span>
+            </div>
+            <div class="api-item">
+              <span class="api-badge api-post">POST</span>
+              <span>/api/v1/quotations/{id}/approve</span>
+              <span style="color:var(--text-dim); font-size:0.75rem;">Signoff Scope</span>
+            </div>
+            <div class="api-item">
+              <span class="api-badge api-post">POST</span>
+              <span>/api/v1/inventory/reserve</span>
+              <span style="color:var(--text-dim); font-size:0.75rem;">Lock Stock</span>
+            </div>
+            <div class="api-item">
+              <span class="api-badge api-post">POST</span>
+              <span>/api/v1/payments/verify</span>
+              <span style="color:var(--text-dim); font-size:0.75rem;">Webhook Settle</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 11: MOCK VS REAL -->
+      <section id="mock-vs-real" class="dev-only">
+        <span class="section-tag">Transparency Matrix</span>
+        <h2 class="section-heading">Current Prototype vs Production</h2>
+        <p class="lead-text">
+          To ensure clarity during client reviews and technical interviews, here is the transparent breakdown of current client-side state versus planned backend cloud services:
+        </p>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Feature</th>
+              <th>Current Prototype (Live Now)</th>
+              <th>Production Architecture (Planned Phase)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Persistence</strong></td>
+              <td>Browser LocalStorage with reactive seed data</td>
+              <td>PostgreSQL 16 with ACID transactions & row locking</td>
+            </tr>
+            <tr>
+              <td><strong>Authentication</strong></td>
+              <td>Dev Role-Switcher with sessionStorage tokens</td>
+              <td>Secure HTTP-only JWTs, OAuth2 GSI, and bcrypt hashes</td>
+            </tr>
+            <tr>
+              <td><strong>Payments</strong></td>
+              <td>Interactive mock checkout modal (UPI/Card simulated)</td>
+              <td>Razorpay API with webhook cryptographic signature check</td>
+            </tr>
+            <tr>
+              <td><strong>State Machine</strong></td>
+              <td>TypeScript centralized ServiceStateMachine class</td>
+              <td>Server-side validation with database event triggers</td>
+            </tr>
+            <tr>
+              <td><strong>Notifications</strong></td>
+              <td>Toast alerts and in-app bell notification queue</td>
+              <td>WhatsApp Cloud API, SendGrid Email, and WebPush</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- SECTION 12: INTERACTIVE DEMO SCRIPT -->
+      <section id="demo-mode">
+        <span class="section-tag">Presentation Playbook</span>
+        <h2 class="section-heading">Interactive Client Demo Script</h2>
+        <p class="lead-text">
+          Use this interactive step-by-step runner while presenting the TORQX AUTOCARE app to a client, interviewer, or stakeholder:
+        </p>
+
+        <div class="demo-step-box">
+          <div class="demo-step-header">
+            <span class="demo-step-counter" id="demoStepCounter">Step 1 of 8</span>
+            <div>
+              <button class="demo-nav-btn" onclick="prevDemoStep()">← Previous</button>
+              <button class="demo-nav-btn" onclick="nextDemoStep()">Next Step →</button>
+            </div>
+          </div>
+          <h3 id="demoTitle" style="color:#fff; font-size:1.3rem; margin-bottom:0.5rem;">1. Customer Login & Garage View</h3>
+          <p id="demoAction" style="color:var(--text-muted); font-size:0.95rem; margin-bottom:1rem;"></p>
+          <div id="demoHighlight" style="font-family:var(--font-mono); font-size:0.85rem; color:var(--amber); background:rgba(0,0,0,0.4); padding:0.75rem; border-radius:6px;"></div>
+        </div>
+      </section>
+
+      <!-- SECTION 13: INTERVIEW Q&A -->
+      <section id="interview-qa">
+        <span class="section-tag">Technical Defense</span>
+        <h2 class="section-heading">Technical Interview Questions & Answers</h2>
+        <p class="lead-text">
+          Deep architectural rationale for engineering interviews:
+        </p>
+
+        <div class="qa-item">
+          <div class="qa-question" onclick="toggleQa(this)">
+            <span>How do you handle concurrent booking race conditions for the same service bay?</span>
+            <span>+</span>
+          </div>
+          <div class="qa-answer">
+            In the planned PostgreSQL backend, service bay reservations use pessimistic row-level locking (<code>SELECT ... FOR UPDATE</code>) wrapped inside an ACID transaction. If two customers attempt to book the same bay and time slot simultaneously, the second transaction is blocked until the first commits, automatically returning an HTTP 409 Conflict with next available slot suggestions.
+          </div>
+        </div>
+
+        <div class="qa-item">
+          <div class="qa-question" onclick="toggleQa(this)">
+            <span>Why implement a centralized State Machine instead of simple status updates?</span>
+            <span>+</span>
+          </div>
+          <div class="qa-answer">
+            Automotive garages involve financial liability and physical safety. A state machine enforces business invariables: for example, a vehicle cannot be marked 'WORK_IN_PROGRESS' if an inspection uncovered critical defects requiring customer quotation approval. Bypassing steps would lead to unauthorized repairs, billing disputes, or uninspected vehicles on public roads.
+          </div>
+        </div>
+
+        <div class="qa-item">
+          <div class="qa-question" onclick="toggleQa(this)">
+            <span>How does inventory stock reservation differ from stock consumption?</span>
+            <span>+</span>
+          </div>
+          <div class="qa-answer">
+            When a technician adds a part (e.g. Brembo brake pads) to a job card, the system immediately reserves that stock (<code>reservedQuantity += 1</code>). This prevents other bays from allocating the same shelf item while waiting for the customer's quote sign-off. If the customer rejects the work, the reservation is released. Once the vehicle is delivered, the stock is physically consumed (<code>stockQuantity -= 1, reservedQuantity -= 1</code>).
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 14: BUSINESS VALUE -->
+      <section id="business-value">
+        <span class="section-tag">ROI & Impact</span>
+        <h2 class="section-heading">Business Value & Revenue Growth</h2>
+        <div class="grid-3">
+          <div class="card">
+            <h4 style="color:#fff; margin-bottom:0.5rem;">+28% Quote Approval Rate</h4>
+            <p style="font-size:0.85rem; color:var(--text-muted);">
+              Digital inspections with health scores and transparent parts pricing build trust. Customers approve necessary additional repairs when they see digital documentation instead of verbal phone calls.
+            </p>
+          </div>
+          <div class="card">
+            <h4 style="color:#fff; margin-bottom:0.5rem;">Zero Bay Idleness</h4>
+            <p style="font-size:0.85rem; color:var(--text-muted);">
+              Real-time bay capacity visibility prevents bottlenecking. Dispatchers know exactly when Bay 02 finishes brake bleeding, queuing the next incoming car seamlessly.
+            </p>
+          </div>
+          <div class="card">
+            <h4 style="color:#fff; margin-bottom:0.5rem;">Repeat Service Lifetime</h4>
+            <p style="font-size:0.85rem; color:var(--text-muted);">
+              Automated factory interval reminders (calculated from odometer & months elapsed) proactively reach out to owners before their periodic service or insurance expires.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 15: GIANT ARCHITECTURE MAP -->
+      <section id="system-map">
+        <span class="section-tag">Grand Overview</span>
+        <h2 class="section-heading">Final System Ecosystem Map</h2>
+        <div class="card accent" style="text-align:center; padding:2.5rem 1.5rem;">
+          <div style="font-family:var(--font-mono); font-size:1.1rem; color:#fff; font-weight:800; margin-bottom:1.5rem;">
+            TORQX AUTOCARE CONNECTED PLATFORM
+          </div>
+          <div style="display:flex; justify-content:center; flex-wrap:wrap; gap:1rem; font-family:var(--font-mono); font-size:0.85rem;">
+            <div style="padding:0.75rem 1.25rem; background:rgba(0,0,0,0.6); border:1px solid var(--border); border-radius:8px;">
+              <span style="color:var(--blue); display:block; font-weight:700;">CUSTOMER PORTAL</span>
+              Vehicles • Booking • Live Tracker
+            </div>
+            <div style="padding:0.75rem 1.25rem; background:rgba(0,0,0,0.6); border:1px solid var(--border); border-radius:8px;">
+              <span style="color:var(--amber); display:block; font-weight:700;">ADMIN DISPATCH</span>
+              Bays • Stock • Techs • Invoices
+            </div>
+            <div style="padding:0.75rem 1.25rem; background:rgba(0,0,0,0.6); border:1px solid var(--border); border-radius:8px;">
+              <span style="color:var(--emerald); display:block; font-weight:700;">TECH TABLET</span>
+              60-Pt DVI • Parts Requisition
+            </div>
+          </div>
+
+          <div style="margin:1.5rem 0; color:var(--amber); font-weight:900; font-size:1.5rem;">
+            ↕
+          </div>
+
+          <div style="display:inline-block; padding:0.75rem 2rem; background:rgba(245,158,11,0.15); border:1px solid var(--border-accent); border-radius:8px; font-family:var(--font-mono); font-weight:700; color:#fff;">
+            UNIFIED SERVICE STATE MACHINE & STORAGE ENGINE
+          </div>
+
+          <div style="margin-top:2rem; font-size:0.8rem; color:var(--text-dim);">
+            TORQX AUTOCARE • Production-Grade Automotive Software Blueprint • 2026
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <a href="#hero" class="back-top" title="Back to Top">↑</a>
+
+  <script>
+    // 26 Steps Data
+    const STEPS = [
+      { id: 1, title: "Customer Sign In", actor: "Customer", desc: "Customer logs into their account using their credentials or quick dev role switcher.", data: "Session token, User profile", screen: "/login or /customer", api: "POST /api/v1/auth/login" },
+      { id: 2, title: "Add Vehicle", actor: "Customer", desc: "Adds vehicle brand, model, variant, registration plate, and current odometer.", data: "CustomerVehicle record", screen: "Customer Dashboard > My Vehicles", api: "POST /api/v1/vehicles" },
+      { id: 3, title: "Select Service", actor: "Customer", desc: "Selects Periodic Maintenance, Brake Overhaul, AC Diagnostics, or Custom Package.", data: "Service ID selection", screen: "Booking Wizard > Step 2", api: "GET /api/v1/pricing/services" },
+      { id: 4, title: "Dynamic Pricing", actor: "System", desc: "Calculates vehicle segment multiplier (Executive, Premium, Luxury) and parts cost.", data: "Price breakdown matrix", screen: "Booking Wizard > Price Sidebar", api: "POST /api/v1/pricing/calculate" },
+      { id: 5, title: "Select Add-ons", actor: "Customer", desc: "Optionally adds Engine Flush, 3D Wheel Alignment, or Ceramic Coating.", data: "Addon selections array", screen: "Booking Wizard > Step 3", api: "POST /api/v1/pricing/calculate" },
+      { id: 6, title: "Logistics Choice", actor: "Customer", desc: "Chooses Workshop Self-Drop or Doorstep Valet Pickup with address input.", data: "PickupDropRequest object", screen: "Booking Wizard > Step 4", api: "POST /api/v1/logistics/pickup" },
+      { id: 7, title: "Date & Time Slot", actor: "Customer", desc: "Selects service date and 2-hour arrival window with bay capacity check.", data: "Appointment timestamp", screen: "Booking Wizard > Step 5", api: "GET /api/v1/slots/availability" },
+      { id: 8, title: "Booking Confirmed", actor: "System", desc: "Applies optional coupon, generates Booking ID (e.g. TORQX-2026-00482), reserves slot.", data: "Booking entity (BOOKING_CONFIRMED)", screen: "Booking Wizard > Step 6", api: "POST /api/v1/bookings" },
+      { id: 9, title: "Vehicle Reception", actor: "Admin / Valet", desc: "Car arrives at garage or valet chauffeur picks it up. Mileage & fuel logged.", data: "Vehicle Check-in log", screen: "Admin > Bookings > Check-in", api: "PATCH /api/v1/bookings/{id}/check-in" },
+      { id: 10, title: "Job Card Opened", actor: "Admin", desc: "Job Card created (JC-2026-XXXX) binding customer, car, and work scope.", data: "JobCard record", screen: "Admin > Job Cards", api: "POST /api/v1/job-cards" },
+      { id: 11, title: "Bay Assignment", actor: "Admin", desc: "Job assigned to Bay 01-04. Bay status transitions to OCCUPIED.", data: "Bay status updated", screen: "Admin > Bays", api: "PATCH /api/v1/bays/{id}" },
+      { id: 12, title: "Technician Assign", actor: "Admin", desc: "Master technician assigned based on job specialization and floor load.", data: "Technician ID linked", screen: "Admin > Job Cards", api: "PATCH /api/v1/job-cards/{id}/assign" },
+      { id: 13, title: "Digital 60-Pt DVI", actor: "Technician", desc: "Technician evaluates engine, brakes, tyres, fluids, suspension, and AC.", data: "InspectionReport object", screen: "Technician > Inspection Tab", api: "POST /api/v1/inspections" },
+      { id: 14, title: "Diagnosis Logging", actor: "Technician", desc: "Logs mechanical tolerances (e.g. 3.2mm brake pad thickness, low AC pressure).", data: "Diagnostic notes array", screen: "Technician > Diagnosis", api: "PATCH /api/v1/inspections/{id}" },
+      { id: 15, title: "Quotation Created", actor: "System", desc: "DVI defect findings generate transparent itemized estimate with parts & labour.", data: "Quotation record (PENDING)", screen: "Admin & Customer Portal", api: "POST /api/v1/quotations" },
+      { id: 16, title: "Customer Signoff", actor: "Customer", desc: "Customer reviews quote and clicks 1-Click Approve or requests scope changes.", data: "Quotation (APPROVED)", screen: "Customer > Service Tracker", api: "POST /api/v1/quotations/{id}/approve" },
+      { id: 17, title: "Parts Reservation", actor: "System", desc: "Required OEM spare parts locked in inventory ledger to prevent duplicate use.", data: "Inventory reserved_quantity updated", screen: "Admin > Inventory", api: "POST /api/v1/inventory/reserve" },
+      { id: 18, title: "Work in Progress", actor: "Technician", desc: "Mechanic performs scheduled service, replaces parts, and flushes fluids.", data: "Status: WORK_IN_PROGRESS", screen: "Technician Dashboard", api: "PATCH /api/v1/job-cards/{id}/status" },
+      { id: 19, title: "Quality Check Gate", actor: "Supervisor", desc: "10-point road test, OBD-II reset, fluid checks. Passes or returns for rework.", data: "QC audit log (PASSED)", screen: "Technician / Admin QC", api: "POST /api/v1/job-cards/{id}/qc" },
+      { id: 20, title: "Invoice Generated", actor: "System", desc: "Formal GST tax invoice created with CGST 9% + SGST 9% and line items.", data: "Invoice record", screen: "Admin > Invoices", api: "POST /api/v1/invoices" },
+      { id: 21, title: "Customer Payment", actor: "Customer", desc: "Customer pays via UPI, Card, Net Banking (interactive mock checkout).", data: "Payment record (PAID)", screen: "Customer > Service Tracker", api: "POST /api/v1/payments/verify" },
+      { id: 22, title: "Vehicle Ready", actor: "Admin", desc: "Vehicle cleaned and polished. Service bay released for next customer.", data: "Status: READY_FOR_DELIVERY", screen: "Admin Dashboard", api: "PATCH /api/v1/job-cards/{id}/status" },
+      { id: 23, title: "Delivery / Pickup", actor: "Customer / Valet", desc: "Handover at garage with gate pass or valet chauffeur delivers to customer.", data: "Handover signoff", screen: "Logistics Console", api: "POST /api/v1/delivery/complete" },
+      { id: 24, title: "Booking Completed", actor: "System", desc: "Status moves to COMPLETED. Bay freed. 6-Month warranty certificate issued.", data: "Status: COMPLETED", screen: "All Dashboards", api: "PATCH /api/v1/bookings/{id}/complete" },
+      { id: 25, title: "Service History", actor: "System", desc: "Work order archived into immutable permanent vehicle service history record.", data: "ServiceHistoryRecord", screen: "Customer & Admin History Tab", api: "GET /api/v1/history/vehicle/{reg}" },
+      { id: 26, title: "Future Reminders", actor: "System", desc: "Calculates next service milestone (+6 months / +10,000 km) and insurance expiry.", data: "VehicleReminder object", screen: "Customer Dashboard Top Cards", api: "GET /api/v1/reminders/due" }
+    ];
+
+    // Populate Workflow Scroller
+    const scroller = document.getElementById('workflowScroller');
+    STEPS.forEach((step, idx) => {
+      const card = document.createElement('div');
+      card.className = `flow-step-card ${idx === 0 ? 'active' : ''}`;
+      card.innerHTML = `
+        <div class="flow-step-num">STAGE ${String(step.id).padStart(2, '0')}</div>
+        <div class="flow-step-title">${step.title}</div>
+        <div class="flow-step-actor">${step.actor}</div>
+      `;
+      card.onclick = () => selectWorkflowStep(idx);
+      scroller.appendChild(card);
+    });
+
+    function selectWorkflowStep(idx) {
+      document.querySelectorAll('.flow-step-card').forEach((c, i) => {
+        c.classList.toggle('active', i === idx);
+      });
+      const s = STEPS[idx];
+      document.getElementById('stepDetailBox').style.display = 'block';
+      document.getElementById('detailStepNum').innerText = `STAGE ${String(s.id).padStart(2, '0')}`;
+      document.getElementById('detailStepTitle').innerText = s.title;
+      document.getElementById('detailStepActor').innerText = s.actor;
+      document.getElementById('detailStepDesc').innerText = s.desc;
+      document.getElementById('detailStepData').innerText = s.data;
+      document.getElementById('detailStepScreen').innerText = s.screen;
+      document.getElementById('detailStepApi').innerText = s.api;
+    }
+    selectWorkflowStep(0);
+
+    // Interactive Pricing Calculator
+    function recalculatePrice() {
+      const vehicleSegment = document.getElementById('calcVehicle').value;
+      const baseServicePrice = Number(document.getElementById('calcService').value);
+      
+      let multiplier = 1.0;
+      let partsFactor = 1850;
+      if (vehicleSegment === 'luxury') { multiplier = 1.8; partsFactor = 4200; }
+      else if (vehicleSegment === 'premium') { multiplier = 1.4; partsFactor = 2800; }
+      else if (vehicleSegment === 'economy') { multiplier = 0.85; partsFactor = 1200; }
+
+      let adjustedBase = Math.round(baseServicePrice * multiplier);
+      let addons = 0;
+      if (document.getElementById('addonOilFlush').checked) addons += 650;
+      if (document.getElementById('addonWheelAlignment').checked) addons += 1200;
+      if (document.getElementById('addonValet').checked) addons += 450;
+
+      let subtotal = adjustedBase + partsFactor + addons;
+      let gst = Math.round(subtotal * 0.18);
+      let grandTotal = subtotal + gst;
+
+      document.getElementById('billBase').innerText = '₹' + adjustedBase.toLocaleString('en-IN');
+      document.getElementById('billParts').innerText = '₹' + partsFactor.toLocaleString('en-IN');
+      document.getElementById('billAddons').innerText = '₹' + addons.toLocaleString('en-IN');
+      document.getElementById('billSubtotal').innerText = '₹' + subtotal.toLocaleString('en-IN');
+      document.getElementById('billGst').innerText = '₹' + gst.toLocaleString('en-IN');
+      document.getElementById('billTotal').innerText = '₹' + grandTotal.toLocaleString('en-IN');
+    }
+    recalculatePrice();
+
+    // Mode Toggle
+    function setMode(mode) {
+      document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+      document.body.className = '';
+      if (mode === 'client') {
+        document.getElementById('btnModeClient').classList.add('active');
+        document.body.classList.add('mode-client');
+      } else if (mode === 'dev') {
+        document.getElementById('btnModeDev').classList.add('active');
+        document.body.classList.add('mode-dev');
+      } else if (mode === 'interview') {
+        document.getElementById('btnModeInterview').classList.add('active');
+        document.location.hash = '#interview-qa';
+      } else {
+        document.getElementById('btnModeAll').classList.add('active');
+      }
+    }
+
+    // Demo Script Runner
+    const DEMO_STEPS = [
+      { title: "1. Customer Garage View", action: "Open Customer Portal and highlight the multi-vehicle digital garage showing BMW 330i with current odometer and upcoming maintenance flags.", highlight: "Show: Dynamic Vehicle Reminders, Factory Service intervals" },
+      { title: "2. Booking Wizard Execution", action: "Click 'Book Service Bay'. Walk through 6 steps: Select BMW -> Periodic Service -> Add Engine Flush -> Choose Workshop Drop -> Select 10:00 AM slot -> Apply Coupon.", highlight: "Show: Live dynamic pricing calculator recalculating as options toggle" },
+      { title: "3. Admin Booking Reception", action: "Switch to Admin Portal via the top role bar. View the new incoming booking. Click 'Check-in Vehicle'.", highlight: "Show: Status moves from BOOKING_CONFIRMED to VEHICLE_RECEIVED" },
+      { title: "4. Bay & Technician Dispatch", action: "Admin assigns Job Card to 'Bay 02' and assigns Master Tech 'Vikram Sharma'.", highlight: "Show: Bay 02 transitions from AVAILABLE to OCCUPIED" },
+      { title: "5. Technician 60-Point Inspection", action: "Switch to Technician Portal. Open assigned job. Fill in tyre tread (3.5mm) and note ruptured sway bar boot. Request new brake pads.", highlight: "Show: Health status tags (GOOD, ATTENTION, CRITICAL)" },
+      { title: "6. Customer Digital Quote Approval", action: "Switch back to Customer Portal. Notice the glowing notification 'Quotation Ready'. Click 'Approve Quotation'.", highlight: "Show: Transparent parts + labour breakdown, 1-Click approval gate" },
+      { title: "7. Quality Check & Handover", action: "Return to Admin/Tech. Supervisor executes QC road test. Generate final GST invoice and trigger customer mock payment.", highlight: "Show: Reserved inventory deducted, Bay released, 6-Month warranty issued" },
+      { title: "8. Archival Service History & Export", action: "Open Admin 'Service History & Reports' tab. View permanent record, search by registration MH 12 AB 9981, and click 'Export CSV'.", highlight: "Show: Production-grade archival log and client-ready CSV download" }
+    ];
+    let currentDemoIdx = 0;
+    function updateDemoView() {
+      const s = DEMO_STEPS[currentDemoIdx];
+      document.getElementById('demoStepCounter').innerText = `Step ${currentDemoIdx + 1} of ${DEMO_STEPS.length}`;
+      document.getElementById('demoTitle').innerText = s.title;
+      document.getElementById('demoAction').innerText = s.action;
+      document.getElementById('demoHighlight').innerText = s.highlight;
+    }
+    function nextDemoStep() {
+      if (currentDemoIdx < DEMO_STEPS.length - 1) { currentDemoIdx++; updateDemoView(); }
+    }
+    function prevDemoStep() {
+      if (currentDemoIdx > 0) { currentDemoIdx--; updateDemoView(); }
+    }
+    updateDemoView();
+
+    // Accordion Toggle
+    function toggleQa(el) {
+      const ans = el.nextElementSibling;
+      const isVisible = ans.style.display === 'block';
+      ans.style.display = isVisible ? 'none' : 'block';
+      el.querySelector('span:last-child').innerText = isVisible ? '+' : '−';
+    }
+
+    // Search filter
+    document.getElementById('globalSearch').addEventListener('input', function(e) {
+      const term = e.target.value.toLowerCase().trim();
+      if (!term) {
+        document.querySelectorAll('section').forEach(s => s.style.display = 'block');
+        return;
+      }
+      document.querySelectorAll('section').forEach(s => {
+        const text = s.innerText.toLowerCase();
+        s.style.display = text.includes(term) ? 'block' : 'none';
+      });
+    });
+  </script>
+</body>
+</html>

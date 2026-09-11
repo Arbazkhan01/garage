@@ -28,4 +28,29 @@ export class AuditService {
     StorageService.set(STORAGE_KEYS.AUDIT_LOGS, logs);
     return newLog;
   }
+
+  public static logAction(
+    userIdentifier: string,
+    userName: string,
+    action: string,
+    details: string,
+    entity: string = 'SYSTEM',
+    entityId: string = ''
+  ): AuditLog {
+    const role: UserRole = userIdentifier.includes('admin')
+      ? 'admin'
+      : userIdentifier.includes('tech')
+      ? 'technician'
+      : 'customer';
+
+    return this.log({
+      userId: userIdentifier,
+      userName: userName || 'System User',
+      userRole: role,
+      action,
+      entity,
+      entityId: entityId || `ACT-${Date.now().toString().slice(-4)}`,
+      details
+    });
+  }
 }

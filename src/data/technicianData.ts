@@ -65,6 +65,71 @@ export const INITIAL_TECHNICIANS: Technician[] = [
     phone: '+91 98220 11454',
     avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&w=300&q=80',
     status: 'available'
+  },
+  {
+    id: 'tech-6',
+    name: 'Vikram Shinde',
+    role: 'Senior Mechanical Tech',
+    specialization: 'Engine Overhauls, Timing Chain & Turbochargers',
+    experienceYears: 11,
+    activeJobs: 2,
+    completedJobs: 135,
+    rating: 4.88,
+    phone: '+91 98220 11455',
+    avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=300&q=80',
+    status: 'busy'
+  },
+  {
+    id: 'tech-7',
+    name: 'Pradeep Rane',
+    role: 'Braking & Hydro-Pneumatics Specialist',
+    specialization: 'Carbon Ceramic, ABS Calibration, Brake Disc Skimming',
+    experienceYears: 6,
+    activeJobs: 1,
+    completedJobs: 76,
+    rating: 4.82,
+    phone: '+91 98220 11456',
+    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=300&q=80',
+    status: 'available'
+  },
+  {
+    id: 'tech-8',
+    name: 'Nitin Gaikwad',
+    role: 'Diagnostic & ECU Remapping Tech',
+    specialization: 'Launch X431, Autel MaxiSys, VCDS, Stage 1/2 Tuning',
+    experienceYears: 8,
+    activeJobs: 1,
+    completedJobs: 92,
+    rating: 4.91,
+    phone: '+91 98220 11457',
+    avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=300&q=80',
+    status: 'available'
+  },
+  {
+    id: 'tech-9',
+    name: 'Siddharth More',
+    role: 'Wheel Geometry & Hunter Specialist',
+    specialization: 'Hunter HawkEye Elite 3D, Run-flat balancing, Camber/Castor',
+    experienceYears: 5,
+    activeJobs: 0,
+    completedJobs: 64,
+    rating: 4.79,
+    phone: '+91 98220 11458',
+    avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=300&q=80',
+    status: 'available'
+  },
+  {
+    id: 'tech-10',
+    name: 'Arjun Deshmukh',
+    role: 'Quality Assurance & Road Test Inspector',
+    specialization: '60-Point Audit, NVH Vibration Analysis, Dynamometer',
+    experienceYears: 14,
+    activeJobs: 1,
+    completedJobs: 210,
+    rating: 4.98,
+    phone: '+91 98220 11459',
+    avatar: 'https://images.unsplash.com/photo-1463453091185-61582044d556?auto=format&fit=crop&w=300&q=80',
+    status: 'busy'
   }
 ];
 

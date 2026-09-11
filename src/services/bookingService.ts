@@ -1,7 +1,11 @@
-import { Booking, ServiceStatus, InspectionReport, Quotation, ServiceBay } from '../types';
+import { Booking, ServiceStatus, InspectionReport, Quotation, ServiceBay, JobCard } from '../types';
 import { StorageService, STORAGE_KEYS } from './storageService';
 import { COMPREHENSIVE_SERVICES } from '../data/pricingData';
 import { PricingService } from './pricingService';
+import { JobCardService } from './jobCardService';
+import { ServiceStateMachine } from './serviceStateMachine';
+import { AuditService } from './auditService';
+import { NotificationService } from './notificationService';
 
 export class BookingService {
   public static getAllBookings(): Booking[] {
@@ -28,7 +32,7 @@ export class BookingService {
     isFull: boolean;
     availableBayNames: string[];
   } {
-    const bays = StorageService.get<ServiceBay[]>(STORAGE_KEYS.BAYS, []);
+    const bays = StorageService.get<ServiceBay[]>(STORAGE_KEYS.SERVICE_BAYS, []);
     const totalBays = bays.length > 0 ? bays.length : 6;
     const allBookings = this.getAllBookings();
 
@@ -38,7 +42,9 @@ export class BookingService {
         b.serviceDate === date &&
         b.serviceTime === timeSlot &&
         b.status !== 'completed' &&
-        b.status !== 'cancelled'
+        b.status !== 'COMPLETED' &&
+        b.status !== 'cancelled' &&
+        b.status !== 'CANCELLED'
     );
 
     const bookedBayNames = new Set(slotBookings.map((b) => b.bayNumber).filter(Boolean));
@@ -99,7 +105,7 @@ export class BookingService {
 
     const assignedBay = capacity.availableBayNames[0] || 'Bay 01';
 
-    // Generate unique ID
+    // Unique Booking ID formatted standard
     const randomNum = Math.floor(100 + Math.random() * 900);
     const bookingId = `TORQX-2026-00${randomNum}`;
 
@@ -121,7 +127,7 @@ export class BookingService {
       customerName: params.customerName,
       customerPhone: params.customerPhone,
       customerEmail: params.customerEmail || `${params.customerName.toLowerCase().replace(/\s+/g, '.')}@gmail.com`,
-      customerAddress: params.customerAddress,
+      customerAddress: params.customerAddress || 'Pune, Maharashtra',
       vehicleBrand: params.vehicleBrand,
       vehicleModel: params.vehicleModel,
       vehicleVariant: params.vehicleVariant || 'Standard',
@@ -135,8 +141,8 @@ export class BookingService {
       pickupDrop: params.pickupDrop || 'garage_drop',
       pickupAddress: params.pickupAddress,
       additionalNotes: params.additionalNotes,
-      status: 'booking_confirmed',
-      technicianId: 'tech-1', // Default lead
+      status: 'BOOKING_CONFIRMED',
+      technicianId: 'tech-1',
       bayNumber: assignedBay,
       priceBreakdown,
       createdAt: new Date().toISOString(),
@@ -147,7 +153,58 @@ export class BookingService {
     all.unshift(newBooking);
     StorageService.set(STORAGE_KEYS.BOOKINGS, all);
 
+    AuditService.logAction(
+      'customer',
+      newBooking.customerName,
+      'CREATE_BOOKING',
+      `Booking #${newBooking.id} created for ${newBooking.vehicleBrand} ${newBooking.vehicleModel} on ${newBooking.serviceDate} (${newBooking.serviceTime}). Reserved in ${assignedBay}.`
+    );
+
+    NotificationService.notifyUser(
+      newBooking.userId,
+      'Booking Confirmed',
+      `Your booking #${newBooking.id} for ${newBooking.vehicleBrand} ${newBooking.vehicleModel} is confirmed on ${newBooking.serviceDate}.`,
+      'success',
+      `/service/${newBooking.id}`
+    );
+
     return newBooking;
+  }
+
+  /**
+   * Automatically executes the Vehicle Check-in Workflow:
+   * 1. Updates booking status to VEHICLE_RECEIVED
+   * 2. Generates Job Card (TORQX-JC-2026-XXXXX)
+   * 3. Occupies Bay & assigns Lead Technician
+   * 4. Logs audit trail & notifies customer
+   */
+  public static markVehicleReceived(
+    bookingId: string,
+    options?: { technicianId?: string; technicianName?: string; bayNumber?: string }
+  ): { booking: Booking | null; jobCard: JobCard | null } {
+    const all = this.getAllBookings();
+    const idx = all.findIndex((b) => b.id.toLowerCase() === bookingId.toLowerCase());
+    if (idx === -1) return { booking: null, jobCard: null };
+
+    const booking = all[idx];
+    const techId = options?.technicianId || booking.technicianId || 'tech-1';
+    const techName = options?.technicianName || (techId === 'tech-1' ? 'Rahul Sharma (Master Tech)' : 'Suresh Patil (Senior Mechanic)');
+    const bay = options?.bayNumber || booking.bayNumber || 'Bay 01';
+
+    // Create Job Card
+    const jobCard = JobCardService.createJobCardFromBooking(booking, techId, techName, bay);
+
+    booking.status = 'VEHICLE_RECEIVED';
+    booking.jobCardId = jobCard.id;
+    booking.jobCardNumber = jobCard.jobCardNumber;
+    booking.technicianId = techId;
+    booking.bayNumber = bay;
+    booking.updatedAt = new Date().toISOString();
+
+    all[idx] = booking;
+    StorageService.set(STORAGE_KEYS.BOOKINGS, all);
+
+    return { booking, jobCard };
   }
 
   public static updateBookingStatus(id: string, status: ServiceStatus, estimatedCompletion?: string): void {
@@ -213,7 +270,11 @@ export class BookingService {
       StorageService.set(STORAGE_KEYS.QUOTATIONS, all);
 
       if (status === 'approved') {
-        this.updateBookingStatus(bookingId, 'work_in_progress');
+        this.updateBookingStatus(bookingId, 'WORK_IN_PROGRESS');
+        const jc = JobCardService.getJobCardById(bookingId);
+        if (jc) {
+          JobCardService.updateJobStatus(jc.id, 'WORK_IN_PROGRESS', 'Quotation approved by customer');
+        }
       }
     }
   }

@@ -45,12 +45,23 @@ export class VehicleService {
     return newVehicle;
   }
 
-  public static updateVehicle(updated: CustomerVehicle): void {
+  public static updateVehicle(
+    updatedOrId: CustomerVehicle | string,
+    partial?: Partial<CustomerVehicle>
+  ): void {
     const all = StorageService.get<CustomerVehicle[]>(STORAGE_KEYS.VEHICLES, []);
-    const index = all.findIndex((v) => v.id === updated.id);
-    if (index !== -1) {
-      all[index] = updated;
-      StorageService.set(STORAGE_KEYS.VEHICLES, all);
+    if (typeof updatedOrId === 'string') {
+      const index = all.findIndex((v) => v.id === updatedOrId);
+      if (index !== -1 && partial) {
+        all[index] = { ...all[index], ...partial };
+        StorageService.set(STORAGE_KEYS.VEHICLES, all);
+      }
+    } else {
+      const index = all.findIndex((v) => v.id === updatedOrId.id);
+      if (index !== -1) {
+        all[index] = updatedOrId;
+        StorageService.set(STORAGE_KEYS.VEHICLES, all);
+      }
     }
   }
 

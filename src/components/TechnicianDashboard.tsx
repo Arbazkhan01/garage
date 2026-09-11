@@ -153,7 +153,7 @@ export const TechnicianDashboard: React.FC = () => {
     // Deduct/reserve from inventory
     InventoryService.reserveStock(part.id, partQty);
 
-    const updated = JobCardService.addPartToJob(selectedJob.id, {
+    const res = JobCardService.addPartToJob(selectedJob.id, {
       id: `jc-part-${Date.now()}`,
       inventoryPartId: part.id,
       partNumber: part.partNumber,
@@ -163,8 +163,8 @@ export const TechnicianDashboard: React.FC = () => {
       total: part.sellingPrice * partQty
     });
 
-    if (updated) {
-      setSelectedJob(updated);
+    if (res && res.jobCard) {
+      setSelectedJob(res.jobCard);
       setSelectedPartId('');
       setPartQty(1);
       loadData();

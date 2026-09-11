@@ -5,7 +5,8 @@ import {
   DEMO_INSPECTIONS,
   DEMO_QUOTATIONS,
   DEMO_INVOICES,
-  DEMO_NOTIFICATIONS
+  DEMO_NOTIFICATIONS,
+  DEMO_SERVICE_HISTORY
 } from '../data/demoData';
 import { INITIAL_TECHNICIANS, INITIAL_SERVICE_BAYS } from '../data/technicianData';
 import { INITIAL_COUPONS } from '../data/pricingData';
@@ -30,6 +31,8 @@ export const STORAGE_KEYS = {
   PAYMENTS: 'torqx_payments',
   TECHNICIANS: 'torqx_technicians',
   BAYS: 'torqx_bays',
+  SERVICE_BAYS: 'torqx_bays',
+  SERVICE_HISTORY: 'torqx_service_history_v1',
   INVENTORY: 'torqx_inventory',
   PICKUP_DROP: 'torqx_pickup_drop',
   COUPONS: 'torqx_coupons',
@@ -96,6 +99,9 @@ export class StorageService {
     }
     if (!localStorage.getItem(STORAGE_KEYS.NOTIFICATIONS)) {
       localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(DEMO_NOTIFICATIONS));
+    }
+    if (!localStorage.getItem(STORAGE_KEYS.SERVICE_HISTORY)) {
+      localStorage.setItem(STORAGE_KEYS.SERVICE_HISTORY, JSON.stringify(DEMO_SERVICE_HISTORY));
     }
     if (!localStorage.getItem(STORAGE_KEYS.REVIEWS)) {
       const initialReviews: ReviewItem[] = TESTIMONIALS_DATA.map((t, idx) => ({

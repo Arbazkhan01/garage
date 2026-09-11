@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Car,
@@ -25,13 +25,14 @@ import {
   AlertTriangle,
   X
 } from 'lucide-react';
-import { CustomerVehicle, Booking, Invoice, NotificationItem, UserProfile, JobCard } from '../types';
+import { CustomerVehicle, Booking, Invoice, NotificationItem, UserProfile, JobCard, ServiceHistoryRecord } from '../types';
 import { AuthService } from '../services/authService';
 import { VehicleService } from '../services/vehicleService';
 import { BookingService } from '../services/bookingService';
 import { InvoiceService } from '../services/invoiceService';
 import { NotificationService } from '../services/notificationService';
 import { JobCardService } from '../services/jobCardService';
+import { ServiceHistoryService } from '../services/serviceHistoryService';
 import { VEHICLE_DATABASE } from '../data/vehicleData';
 
 export const CustomerDashboard: React.FC = () => {
@@ -61,7 +62,78 @@ export const CustomerDashboard: React.FC = () => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [jobCards, setJobCards] = useState<JobCard[]>([]);
+  const [serviceHistory, setServiceHistory] = useState<ServiceHistoryRecord[]>([]);
   const [couponCopied, setCouponCopied] = useState<string | null>(null);
+
+  // Computed dynamic vehicle reminders
+  const computedReminders = useMemo(() => {
+    if (vehicles.length === 0) {
+      return [
+        {
+          vehicle: 'BMW 330i (MH 12 AB 9981)',
+          title: 'Periodic Scheduled Service',
+          due: 'Due in 24 Days or 1,250 km',
+          badge: 'Upcoming',
+          badgeColor: 'amber',
+          desc: 'Engine oil change, oil filter, air filter cleaning, 40-point safety check.',
+          action: 'Book Service Bay'
+        },
+        {
+          vehicle: 'BMW 330i (MH 12 AB 9981)',
+          title: 'Comprehensive Insurance Expiry',
+          due: 'Expires: 18 April 2026',
+          badge: 'Active',
+          badgeColor: 'emerald',
+          desc: 'Zero depreciation + engine protect policy. 0% No-claim bonus lock.',
+          action: 'Assistance via WhatsApp'
+        },
+        {
+          vehicle: 'BMW 330i (MH 12 AB 9981)',
+          title: 'Pollution Under Control (PUC)',
+          due: 'Expires in 14 Days (Mandatory)',
+          badge: 'Action Required',
+          badgeColor: 'red',
+          desc: 'Government mandated emissions certificate required for road legality.',
+          action: 'Renew with Service'
+        }
+      ];
+    }
+
+    return vehicles.flatMap((v) => {
+      const rem = ServiceHistoryService.getVehicleReminders(v.regNumber);
+      return [
+        {
+          vehicle: `${v.brand} ${v.model} (${v.regNumber})`,
+          title: 'Periodic Scheduled Maintenance',
+          due: rem.isServiceOverdue
+            ? 'Overdue for Service'
+            : `Due in ${rem.serviceDueDays} Days or ${rem.serviceDueKm.toLocaleString('en-IN')} km`,
+          badge: rem.isServiceOverdue ? 'Action Required' : rem.serviceDueDays <= 15 ? 'Upcoming' : 'On Schedule',
+          badgeColor: rem.isServiceOverdue ? 'red' : rem.serviceDueDays <= 15 ? 'amber' : 'emerald',
+          desc: rem.recommendedAction,
+          action: 'Book Service Bay'
+        },
+        {
+          vehicle: `${v.brand} ${v.model} (${v.regNumber})`,
+          title: 'Insurance Policy Renewal',
+          due: `Expires in ${rem.insuranceDueDays} Days`,
+          badge: 'Active',
+          badgeColor: 'emerald',
+          desc: 'Comprehensive coverage active. Zero-depreciation cover locked.',
+          action: 'Assistance via WhatsApp'
+        },
+        {
+          vehicle: `${v.brand} ${v.model} (${v.regNumber})`,
+          title: 'Pollution Under Control (PUC)',
+          due: `Valid for next ${rem.pucDueDays} Days`,
+          badge: rem.pucDueDays <= 30 ? 'Action Required' : 'Valid',
+          badgeColor: rem.pucDueDays <= 30 ? 'amber' : 'emerald',
+          desc: 'Mandatory emissions compliance certificate for road legality.',
+          action: 'Renew with Service'
+        }
+      ];
+    });
+  }, [vehicles]);
 
   // Add Vehicle Modal State
   const [showAddVehicleModal, setShowAddVehicleModal] = useState(false);
@@ -87,6 +159,10 @@ export const CustomerDashboard: React.FC = () => {
       setBookings(BookingService.getUserBookings(user.id));
       setInvoices(InvoiceService.getUserInvoices(user.email));
       setNotifications(NotificationService.getUserNotifications(user.id));
+      const userHist = ServiceHistoryService.getHistoryForCustomer(user.email);
+      setServiceHistory(userHist.length > 0 ? userHist : ServiceHistoryService.getAllHistory());
+    } else {
+      setServiceHistory(ServiceHistoryService.getAllHistory());
     }
     setJobCards(JobCardService.getAllJobCards());
   };
@@ -530,51 +606,109 @@ export const CustomerDashboard: React.FC = () => {
       {/* TAB: SERVICE HISTORY */}
       {activeTab === 'history' && (
         <div className="bg-[#12161f] border border-white/10 rounded-2xl p-6 sm:p-8 space-y-6">
-          <div>
-            <h3 className="text-xl font-bold text-white">Documented Maintenance History</h3>
-            <p className="text-xs text-neutral-400">
-              Complete archival records of all services performed at TORQX AUTOCARE Pune.
-            </p>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
+            <div>
+              <h3 className="text-xl font-bold text-white">Documented Maintenance History</h3>
+              <p className="text-xs text-neutral-400 mt-0.5">
+                Official certified workshop service records with parts replaced, technicians, and warranty tags.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-xs font-tech font-bold">
+                {serviceHistory.length} Certified Records
+              </span>
+            </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="border-b border-white/10 text-neutral-400 font-tech uppercase tracking-wider">
-                  <th className="py-3 px-3">Service Date</th>
-                  <th className="py-3 px-3">Vehicle</th>
-                  <th className="py-3 px-3">Package / Scope</th>
-                  <th className="py-3 px-3">Odometer</th>
-                  <th className="py-3 px-3 text-right">Cost (INR)</th>
-                  <th className="py-3 px-3 text-center">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {bookings.map((b) => (
-                  <tr key={b.id} className="hover:bg-white/5 transition-colors">
-                    <td className="py-3.5 px-3 text-white font-tech">{b.serviceDate}</td>
-                    <td className="py-3.5 px-3">
-                      <strong className="text-white block">{b.vehicleBrand} {b.vehicleModel}</strong>
-                      <span className="text-neutral-400 font-mono text-[11px]">{b.vehicleRegNumber}</span>
-                    </td>
-                    <td className="py-3.5 px-3 text-neutral-300">{b.serviceName}</td>
-                    <td className="py-3.5 px-3 text-neutral-400 font-mono">18,450 KM</td>
-                    <td className="py-3.5 px-3 text-right font-mono font-bold text-white">
-                      ₹{b.priceBreakdown.grandTotal.toLocaleString('en-IN')}
-                    </td>
-                    <td className="py-3.5 px-3 text-center">
+          {serviceHistory.length === 0 ? (
+            <div className="text-center py-12 text-neutral-400">
+              <Wrench className="w-12 h-12 text-neutral-600 mx-auto mb-3" />
+              <p className="text-sm">No historical service records found.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {serviceHistory.map((rec) => (
+                <div
+                  key={rec.id}
+                  className="bg-black/40 border border-white/10 rounded-xl p-5 hover:border-white/20 transition-all space-y-4"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/5 pb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-[#ff5500]/10 border border-[#ff5500]/30 flex items-center justify-center text-[#ff5500]">
+                        <Car className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-base text-white">{rec.vehicleDetails}</h4>
+                        <span className="text-neutral-400 font-mono text-xs">{rec.vehicleRegNumber}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 sm:text-right">
+                      <div>
+                        <span className="text-xs font-tech text-neutral-400 block">Service Date</span>
+                        <strong className="text-xs text-white font-tech">{rec.date}</strong>
+                      </div>
+                      <div className="h-6 w-px bg-white/10 hidden sm:block" />
+                      <div>
+                        <span className="text-xs font-tech text-neutral-400 block">Total Amount</span>
+                        <strong className="text-sm font-mono font-bold text-white">₹{rec.totalCost.toLocaleString('en-IN')}</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                    <div>
+                      <span className="text-[10px] font-tech uppercase text-neutral-500 block">Service Package</span>
+                      <strong className="text-neutral-200">{rec.serviceType}</strong>
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-tech uppercase text-neutral-500 block">Odometer Reading</span>
+                      <span className="font-mono text-neutral-300">{rec.odometer.toLocaleString('en-IN')} KM</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-tech uppercase text-neutral-500 block">Assigned Technician</span>
+                      <span className="text-neutral-300">{rec.technicianName}</span>
+                    </div>
+                  </div>
+
+                  {rec.partsReplaced && rec.partsReplaced.length > 0 && (
+                    <div className="pt-2 border-t border-white/5">
+                      <span className="text-[10px] font-tech uppercase text-neutral-500 block mb-1.5">
+                        OEM Parts Installed
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {rec.partsReplaced.map((part, pIdx) => (
+                          <span
+                            key={pIdx}
+                            className="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[11px] font-mono text-neutral-300"
+                          >
+                            ✓ {part}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="pt-2 border-t border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                    <div className="flex items-center gap-2 text-emerald-400">
+                      <ShieldCheck className="w-4 h-4" />
+                      <span>{rec.warrantyPeriod || '12 Months / 20,000 km Warranty'}</span>
+                    </div>
+
+                    <div className="flex items-center gap-3">
                       <button
-                        onClick={() => navigate(`/service/${b.id}`)}
-                        className="text-[#ff5500] hover:underline font-tech uppercase text-[11px]"
+                        onClick={() => navigate(`/service/${rec.bookingId || 'TORQX-2026-00482'}`)}
+                        className="text-[#ff5500] hover:underline font-tech uppercase text-xs flex items-center gap-1"
                       >
-                        View Report
+                        <span>View Inspection & Invoice</span>
+                        <ChevronRight className="w-3.5 h-3.5" />
                       </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -938,54 +1072,34 @@ export const CustomerDashboard: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-              {[
-                {
-                  title: 'Periodic Scheduled Service',
-                  due: 'Due in 24 Days or 1,250 km',
-                  badge: 'Upcoming',
-                  badgeColor: 'amber',
-                  desc: 'Engine oil change, oil filter, air filter cleaning, 40-point safety check.',
-                  action: 'Book Service Bay'
-                },
-                {
-                  title: 'Comprehensive Insurance Expiry',
-                  due: 'Expires: 18 April 2026',
-                  badge: 'Active',
-                  badgeColor: 'emerald',
-                  desc: 'Zero depreciation + engine protect policy. 0% No-claim bonus lock.',
-                  action: 'Assistance via WhatsApp'
-                },
-                {
-                  title: 'Pollution Under Control (PUC)',
-                  due: 'Expires in 14 Days (Mandatory)',
-                  badge: 'Action Required',
-                  badgeColor: 'red',
-                  desc: 'Government mandated emissions certificate required for road legality.',
-                  action: 'Renew with Service'
-                },
-                {
-                  title: 'Brake Fluid Moisture Test',
-                  due: 'Recommended every 24 Months',
-                  badge: 'Preventive',
-                  badgeColor: 'blue',
-                  desc: 'Hygroscopic moisture saturation check prevents brake fade under heavy braking.',
-                  action: 'Schedule Check'
-                }
-              ].map((rem, idx) => (
-                <div key={idx} className="bg-black/30 border border-white/10 rounded-xl p-5 flex flex-col justify-between">
+              {computedReminders.map((rem, idx) => (
+                <div key={idx} className="bg-black/30 border border-white/10 rounded-xl p-5 flex flex-col justify-between hover:border-white/20 transition-colors">
                   <div>
-                    <div className="flex items-center justify-between gap-2 mb-2">
-                      <h4 className="font-bold text-white text-base">{rem.title}</h4>
-                      <span className="text-[10px] font-tech font-bold uppercase px-2 py-0.5 rounded bg-white/5 border border-white/10 text-neutral-300">
+                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                      <div>
+                        <span className="text-[10px] font-tech font-bold uppercase text-[#ff5500] block">
+                          {rem.vehicle}
+                        </span>
+                        <h4 className="font-bold text-white text-base">{rem.title}</h4>
+                      </div>
+                      <span
+                        className={`text-[10px] font-tech font-bold uppercase px-2 py-0.5 rounded border ${
+                          rem.badgeColor === 'red'
+                            ? 'bg-red-500/10 text-red-400 border-red-500/25'
+                            : rem.badgeColor === 'amber'
+                            ? 'bg-amber-500/10 text-amber-400 border-amber-500/25'
+                            : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25'
+                        }`}
+                      >
                         {rem.badge}
                       </span>
                     </div>
-                    <div className="text-xs font-mono font-bold text-[#ff5500] mb-2">{rem.due}</div>
+                    <div className="text-xs font-mono font-bold text-white mb-2">{rem.due}</div>
                     <p className="text-xs text-neutral-400 mb-4">{rem.desc}</p>
                   </div>
                   <button
                     onClick={() => navigate('/book-service')}
-                    className="self-start px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-neutral-200 hover:text-white font-tech text-xs uppercase tracking-wider border border-white/10"
+                    className="self-start px-4 py-2 rounded-xl bg-white/5 hover:bg-[#ff5500] hover:text-white text-neutral-200 font-tech text-xs uppercase tracking-wider border border-white/10 transition-colors"
                   >
                     {rem.action}
                   </button>

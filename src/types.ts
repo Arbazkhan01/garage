@@ -70,16 +70,37 @@ export interface AddonOption {
   duration?: string;
 }
 
+export type ServiceLifecycleStatus =
+  | 'BOOKING_CONFIRMED'
+  | 'VEHICLE_RECEIVED'
+  | 'INSPECTION'
+  | 'DIAGNOSIS'
+  | 'QUOTE_PENDING'
+  | 'APPROVAL_PENDING'
+  | 'PARTS_RESERVED'
+  | 'WORK_IN_PROGRESS'
+  | 'QUALITY_CHECK'
+  | 'READY_FOR_DELIVERY'
+  | 'OUT_FOR_DELIVERY'
+  | 'COMPLETED'
+  | 'CANCELLED';
+
 export type ServiceStatus =
+  | ServiceLifecycleStatus
   | 'booking_confirmed'
   | 'vehicle_received'
   | 'inspection'
   | 'diagnosis'
   | 'quote_sent'
   | 'quote_approved'
+  | 'quote_pending'
+  | 'approval_pending'
+  | 'parts_reserved'
   | 'work_in_progress'
   | 'quality_check'
   | 'ready_for_pickup'
+  | 'ready_for_delivery'
+  | 'out_for_delivery'
   | 'completed'
   | 'cancelled';
 
@@ -118,15 +139,20 @@ export interface Booking {
   pickupAddress?: string;
   additionalNotes?: string;
   status: ServiceStatus;
+  jobCardId?: string;
+  jobCardNumber?: string;
   technicianId?: string;
   bayNumber?: string;
+  deliveryType?: 'workshop_pickup' | 'doorstep_delivery';
+  deliveryTimestamp?: string;
+  driverName?: string;
   priceBreakdown: PriceBreakdown;
   createdAt: string;
   updatedAt: string;
   estimatedCompletion?: string;
 }
 
-export type HealthStatus = 'GOOD' | 'ATTENTION' | 'URGENT';
+export type HealthStatus = 'GOOD' | 'ATTENTION' | 'URGENT' | 'CRITICAL';
 
 export interface InspectionItem {
   id: string;
@@ -195,6 +221,8 @@ export interface Invoice {
   id: string;
   invoiceNumber: string;
   bookingId: string;
+  jobCardId?: string;
+  jobCardNumber?: string;
   date: string;
   customerName: string;
   customerPhone: string;
@@ -207,8 +235,14 @@ export interface Invoice {
   discount: number;
   couponCode?: string;
   gst: number;
+  cgst?: number;
+  sgst?: number;
+  gstin?: string;
+  sacCode?: string;
   total: number;
-  paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
+  paidAmount?: number;
+  remainingAmount?: number;
+  paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded' | 'partially_paid' | 'PARTIALLY_PAID' | 'PAID' | 'PENDING';
   paymentMethod?: 'UPI' | 'Card' | 'Net Banking' | 'Razorpay' | 'Cash at Counter';
   transactionId?: string;
   paidAt?: string;
@@ -359,16 +393,80 @@ export interface BookingFormData {
 
 export type JobStatus =
   | 'OPEN'
+  | 'BOOKING_CONFIRMED'
   | 'VEHICLE_RECEIVED'
   | 'INSPECTION'
   | 'DIAGNOSIS'
   | 'QUOTE_PENDING'
   | 'APPROVAL_PENDING'
+  | 'PARTS_RESERVED'
   | 'WORK_IN_PROGRESS'
   | 'QUALITY_CHECK'
   | 'READY_FOR_DELIVERY'
+  | 'OUT_FOR_DELIVERY'
   | 'COMPLETED'
   | 'CANCELLED';
+
+export type QCItemStatus = 'PASS' | 'FAIL' | 'NOT_CHECKED';
+
+export interface QualityCheckAudit {
+  id: string;
+  jobCardId: string;
+  inspectorName: string;
+  items: {
+    engine: QCItemStatus;
+    brakes: QCItemStatus;
+    tyres: QCItemStatus;
+    lights: QCItemStatus;
+    ac: QCItemStatus;
+    fluidLevels: QCItemStatus;
+    electrical: QCItemStatus;
+    exterior: QCItemStatus;
+    interior: QCItemStatus;
+    roadTest: QCItemStatus;
+  };
+  overallStatus: 'PASS' | 'FAIL';
+  failureReasons?: string[];
+  notes?: string;
+  timestamp: string;
+}
+
+export type PartRequestStatus = 'REQUESTED' | 'APPROVED' | 'RESERVED' | 'ISSUED' | 'REJECTED';
+
+export interface PartRequest {
+  id: string;
+  jobCardId: string;
+  technicianId: string;
+  technicianName: string;
+  partId: string;
+  partName: string;
+  partNumber: string;
+  quantity: number;
+  status: PartRequestStatus;
+  requestedAt: string;
+  resolvedAt?: string;
+  notes?: string;
+}
+
+export interface ServiceHistoryRecord {
+  id: string;
+  vehicleId?: string;
+  vehicleReg: string;
+  vehicleName: string;
+  customerName: string;
+  customerEmail: string;
+  date: string;
+  odometer: number;
+  serviceType: string;
+  partsUsed: string[];
+  partsCost: number;
+  labourCost: number;
+  totalCost: number;
+  technicianName: string;
+  jobCardNumber: string;
+  invoiceNumber: string;
+  notes?: string;
+}
 
 export interface JobCardPartItem {
   id: string;
